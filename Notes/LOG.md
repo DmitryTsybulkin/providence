@@ -88,3 +88,35 @@ Decisions, surprises and the doc URLs used. Newest milestone at the bottom.
   a first run is not an error and it keeps the browser console clean.
 - Banner: "local server unreachable" (REST call failed / proxy 5xx) or "Bybit unreachable — cached data" (`stale: true`).
   `[[UI SPEC]] §7` (banner design) is not in the repo, so this is a plain one-line bar under the top bar.
+
+## M3 Chart (2026-11-16)
+
+**KLineChart docs/source used**: https://v9.klinecharts.com/en-US/guide/instance-api (`applyNewData`, `updateData`,
+`setLoadDataCallback`, `scrollToTimestamp`, `getVisibleRange`, `getConvertPictureUrl`), plus the bundled
+`dist/index.d.ts` of 9.8.12 as the final word on signatures.
+
+**Surprises**
+- `loadMore` / `applyMoreData` are deprecated since 9.8.0 → used `setLoadDataCallback`. Its naming is inverted from
+  what one expects: `forward` = **older** candles (left edge), `backward` = **newer** (right edge).
+- `applyNewData` is asynchronous: the data list is swapped in a microtask. Calling `scrollToTimestamp` right after it
+  scrolls the *old* list. `ChartEngine.setData` therefore returns a promise (resolved by the library's completion
+  callback) and takes the scroll target as an option.
+- Right after `applyNewData` the view sits at the newest candle, which immediately fires a "backward" page request.
+  The engine holds back right-edge paging until the view has been moved to its target.
+- `requestAnimationFrame` never fires in a background tab, so the rAF redraw throttle has a 500 ms timer fallback;
+  otherwise live candles would queue up forever while the tab is hidden.
+
+**Decisions**
+- `ChartEngine` (apps/web/src/chart/types.ts) exposes no klinecharts types. `CellController` (lib/) owns the data
+  flow (load, page older/newer, live, go to date) and is unit-tested against a fake engine and adapter.
+- **History window**: "go to date" and a timeframe switch while scrolled back load a 1000-candle window around the
+  target instead of everything between the target and now (1m a year back would be 525 000 candles, over the cap).
+  The window pages in both directions; while it does not reach the present the cell shows a "History" badge and
+  ignores live candles; paging forward until the present re-attaches live updates. "To latest" jumps back.
+- 50 000-candle cap (chart.md §4): paging older simply stops at the cap (`more = false`). Trimming the other end
+  would need `applyNewData` again, which resets the view — not worth it for the MVP.
+- Timeframe switch keeps the right-edge time (chart.md §4): `getRightEdgeTime()` returns the bar that
+  `scrollToTimestamp()` places at the right edge, so repeated switches do not drift (verified over 6 switches).
+- Live feed hole detection: if a live candle is more than one bar ahead of the chart's last candle, the cell reloads.
+- Verified in the browser: BTCUSDT 1h paged back 7 pages (8000 candles, ≈ 11 months) in ~6 s with 0 holes; all 7
+  timeframes load; live 1m candle updates.

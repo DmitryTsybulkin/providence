@@ -27,5 +27,19 @@ export const en = {
     },
   },
   topbar: { language: 'Language' },
+  chart: {
+    loading: 'Loading candles…',
+    error: 'Could not load candles',
+    retry: 'Retry',
+    noData: 'No candles for this symbol',
+    history: 'History',
+    historyHint: 'Viewing history — live updates are paused',
+    toNow: 'To latest',
+    reconnecting: 'Reconnecting',
+    goToDate: 'Go to date',
+    go: 'Go',
+    cancel: 'Cancel',
+    timeframe: 'Timeframe',
+  },
 }
 export type Strings = typeof en

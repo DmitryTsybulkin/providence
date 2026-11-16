@@ -1,10 +1,10 @@
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Banner } from './components/Banner'
+import { ChartCell } from './components/ChartCell'
 import { TopBar } from './components/TopBar'
 import { AssetList } from './panels/AssetList'
 import { boot, useBoot } from './state/boot'
-import { useLayout } from './state/layout'
 import { startTickerPolling, useMarket } from './state/market'
 
 export function App() {
@@ -24,8 +24,6 @@ export function App() {
     return startTickerPolling()
   }, [hydrated])
 
-  const cell = useLayout((s) => s.cells[s.active])
-
   return (
     <div className="app">
       <TopBar />
@@ -34,9 +32,7 @@ export function App() {
         <main className="workspace">
           <AssetList />
           <section className="charts">
-            <div className="empty muted">
-              {cell.category}:{cell.symbol} · {cell.tf}
-            </div>
+            <ChartCell index={0} />
           </section>
         </main>
       ) : (

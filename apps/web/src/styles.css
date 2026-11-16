@@ -84,3 +84,27 @@ button:disabled { cursor: default; opacity: 0.45; }
 .star { color: var(--muted); font-size: 13px; line-height: 1; width: 22px; height: 22px; }
 .star:hover { color: var(--text); }
 .star.on { color: var(--warn); }
+
+/* shared bits */
+.row { display: flex; align-items: center; gap: 6px; }
+.stack { display: flex; flex-direction: column; gap: 6px; }
+.stack.center { align-items: center; }
+.anchor { position: relative; display: inline-flex; }
+.popover { position: absolute; top: calc(100% + 4px); left: 0; z-index: 30; padding: 8px; background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius); }
+.popover.right { left: auto; right: 0; }
+.tag { padding: 1px 5px; border: 1px solid var(--border); border-radius: 3px; color: var(--muted); font-size: 11px; }
+.badge { padding: 1px 6px; border-radius: 3px; background: var(--panel-2); color: var(--muted); font-size: 11px; white-space: nowrap; }
+.badge.warn { background: #3a2c12; color: #f3d9a4; }
+.tool-btn { height: 24px; padding: 0 8px; border-radius: var(--radius); color: var(--muted); font-size: 12px; white-space: nowrap; }
+.tool-btn:hover { background: var(--hover); color: var(--text); }
+.tool-btn.active { background: var(--panel-2); color: var(--text); }
+
+/* chart cell */
+.chart-cell { display: flex; flex-direction: column; flex: 1 1 0; min-width: 0; min-height: 0; background: var(--bg); }
+.chart-head { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 8px; border-bottom: 1px solid var(--border); background: var(--panel); flex: none; }
+.chart-symbol { font-weight: 600; }
+.chart-quote { font-size: 12px; white-space: nowrap; }
+.chart-body { position: relative; flex: 1 1 auto; min-height: 0; display: flex; }
+.chart-canvas { flex: 1 1 auto; min-width: 0; min-height: 0; }
+.chart-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(13, 16, 20, 0.8); z-index: 5; }
+.chart-overlay.passive { background: none; pointer-events: none; align-items: flex-start; padding-top: 44px; }
