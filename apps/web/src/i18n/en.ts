@@ -96,6 +96,16 @@ export const en = {
     status: { active: 'Active', paused: 'Paused', triggered: 'Triggered', expired: 'Expired' },
     field: { type: 'Alert on', indicator: 'Indicator', condition: 'Condition', value: 'Value', trigger: 'Trigger', expires: 'Expires (optional)', note: 'Note (optional)' },
   },
+  export: {
+    title: 'Export',
+    csv: 'Candles as CSV',
+    json: 'Candles + indicators as JSON',
+    png: 'Screenshot as PNG',
+    import: 'Open exported JSON…',
+    importFailed: 'Could not open the file: {{error}}',
+    viewing: 'Imported: {{name}}',
+    close: 'Close import',
+  },
   chart: {
     loading: 'Loading candles…',
     error: 'Could not load candles',

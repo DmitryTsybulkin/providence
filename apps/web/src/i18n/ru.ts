@@ -98,6 +98,16 @@ export const ru: Strings = {
     status: { active: 'Активен', paused: 'Пауза', triggered: 'Сработал', expired: 'Истёк' },
     field: { type: 'Алерт на', indicator: 'Индикатор', condition: 'Условие', value: 'Значение', trigger: 'Срабатывание', expires: 'Истекает (необязательно)', note: 'Заметка (необязательно)' },
   },
+  export: {
+    title: 'Экспорт',
+    csv: 'Свечи в CSV',
+    json: 'Свечи и индикаторы в JSON',
+    png: 'Снимок в PNG',
+    import: 'Открыть экспортированный JSON…',
+    importFailed: 'Не удалось открыть файл: {{error}}',
+    viewing: 'Импорт: {{name}}',
+    close: 'Закрыть импорт',
+  },
   chart: {
     loading: 'Загрузка свечей…',
     error: 'Не удалось загрузить свечи',

@@ -97,6 +97,18 @@ export class CellController {
     return this.show(this.series, target)
   }
 
+  /** Show a static, imported set of candles (no paging, no live updates). `show()` returns to market data. */
+  async showStatic(candles: Candle[]): Promise<void> {
+    this.seq++
+    this.unsubscribe?.()
+    this.unsubscribe = null
+    this.series = null
+    this.live = false
+    this.pending = []
+    await this.engine.setData(candles, { olderMore: false, newerMore: false })
+    this.setStatus({ loading: false, error: null, live: false, empty: candles.length === 0 })
+  }
+
   goLive(): Promise<void> {
     if (!this.series) return Promise.resolve()
     if (this.live) {

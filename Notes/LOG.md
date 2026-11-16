@@ -245,3 +245,19 @@ Corrected drawings.md §2 table:
 - RSI(14) 1m "every time" alert fired at 21:12:00.637 and 21:13:00.580 UTC — once per candle, ~0.6 s after close.
 - Not tested by hand: tab closed while an alert fires (the engine does not depend on the tab), the bell button on
   the drawing style bar, expiry in the UI.
+
+## M8 Export (2026-11-16)
+
+- "Export" menu in each chart header: CSV, JSON, PNG, and "Open exported JSON…".
+- CSV: `time,open,high,low,close,volume`, ISO-8601 UTC time, all loaded candles.
+- JSON: legacy shape `{ meta, chart: { type: "Candles", tf, data: [[t,o,h,l,c,v]] }, indicators: [{ name, params, data }] }`.
+  `meta` = `{ app, version, source, symbol, category, exportedAt }`. Each indicator also carries `keys` (column names
+  for `data`), an addition to the documented shape. `[[UI SPEC]] §3` (the original definition) is not in the repo, so
+  `meta` and `chart.type` follow export.md's one-line description.
+- PNG: `getConvertPictureUrl(true, 'png', background)` — candles, indicators and drawings.
+  File names: `SYMBOL_TF_yyyyMMdd-HHmm.ext` (local time).
+- Import for viewing: the JSON's candles are shown as a static series in the cell (badge "Imported: …", no paging, no
+  live updates) until "Close import". The file's indicator values are **not** drawn; the cell's own indicators are
+  recomputed on the imported candles. Drawings of the cell's symbol stay visible on top.
+- Verified in the browser: three files with correct names and contents (1000 rows, VOL indicator in JSON, PNG data
+  URL), bad file rejected with a message, exported JSON re-opened and closed again.

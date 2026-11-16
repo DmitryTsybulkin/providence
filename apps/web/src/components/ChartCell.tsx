@@ -12,6 +12,7 @@ import { useMarket } from '../state/market'
 import { useSettings } from '../state/settings'
 import { useWsStatus } from '../state/ws'
 import { DrawingStyleBar, DrawingToolbar } from './Drawings'
+import { ExportMenu } from './ExportMenu'
 import { GoToDate } from './GoToDate'
 import { IndicatorChips, IndicatorPicker } from './Indicators'
 
@@ -42,6 +43,8 @@ export function ChartCell({ index }: { index: number }) {
   const [tool, setTool] = useState<string | null>(null)
   const [selected, setSelected] = useState<DrawingShape | null>(null)
   const [drawOptions, setDrawOptions] = useState<DrawingOptions>({ magnet: false, lockAll: false, hideAll: false })
+  /** Name of an imported JSON file's symbol while it is being viewed instead of market data. */
+  const [imported, setImported] = useState<string | null>(null)
   const keyRef = useRef(key)
   keyRef.current = key
   const appliedKey = useRef<string | null>(null)
@@ -81,6 +84,7 @@ export function ChartCell({ index }: { index: number }) {
     // chart.md §4: a timeframe switch keeps the current right-edge time in view.
     const keep = shown.current === key ? engine.getRightEdgeTime() : null
     shown.current = key
+    setImported(null)
     void ctrl.show({ symbolKey: key, tf: cell.tf }, keep)
   }, [key, cell.tf])
 
@@ -171,9 +175,33 @@ export function ChartCell({ index }: { index: number }) {
         </div>
         <IndicatorPicker index={index} />
         <GoToDate onGo={(time) => void ctrlRef.current?.goTo(time)} />
+        <ExportMenu
+          getEngine={() => engineRef.current}
+          symbol={imported ?? cell.symbol}
+          category={cell.category}
+          tf={cell.tf}
+          onImport={(chart) => {
+            setImported(chart.symbol)
+            void ctrlRef.current?.showStatic(chart.candles)
+          }}
+        />
         <span className="grow" />
+        {imported && (
+          <>
+            <span className="badge warn">{t('export.viewing', { name: imported })}</span>
+            <button
+              className="tool-btn"
+              onClick={() => {
+                setImported(null)
+                void ctrlRef.current?.show({ symbolKey: key, tf: cell.tf })
+              }}
+            >
+              {t('export.close')}
+            </button>
+          </>
+        )}
         {wsStatus === 'reconnecting' && <span className="badge warn">{t('chart.reconnecting')}</span>}
-        {!status.live && !status.loading && !status.error && (
+        {!imported && !status.live && !status.loading && !status.error && (
           <>
             <span className="badge" title={t('chart.historyHint')}>
               {t('chart.history')}
