@@ -271,3 +271,4 @@ Corrected drawings.md §2 table:
 - Not fixable from code and not something to change on the user's behalf (system notification settings).
   Added: README section "macOS notifications" with the one-time setup, `POST /api/alerts/test-notification`
   (sends through the OS channel only, no history entry) and a button for it in the Alerts panel.
+- After allowing notifications for Script Editor, the user confirmed that the test button shows a banner.
