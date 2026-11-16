@@ -33,7 +33,8 @@ class HttpError extends Error {
     super(message)
   }
 }
-const bad = (message: string) => new HttpError(400, message)
+export const bad = (message: string) => new HttpError(400, message)
+export const notFound = (message = 'not found') => new HttpError(404, message)
 
 export function parseCategory(v: unknown): Category {
   if (typeof v === 'string' && (CATEGORIES as readonly string[]).includes(v)) return v as Category
@@ -105,8 +106,9 @@ export function buildApp(deps: AppDeps): App {
     const { key } = req.params as { key: string }
     if (!KEY_RE.test(key)) throw bad('invalid key')
     const row = kv.get<unknown>(key)
-    if (!row) throw new HttpError(404, 'not found')
-    return { key, value: row.value, updatedAt: row.updatedAt }
+    // A missing key is a normal answer (first run), not an error: 200 with `exists: false`.
+    if (!row) return { key, exists: false, value: null }
+    return { key, exists: true, value: row.value, updatedAt: row.updatedAt }
   })
 
   fastify.put('/api/store/:key', async (req) => {

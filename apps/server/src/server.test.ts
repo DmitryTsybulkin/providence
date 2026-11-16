@@ -220,7 +220,7 @@ describe('HTTP routes', () => {
   })
   it('stores, reads and deletes key/value pairs', async () => {
     const { app } = setup()
-    expect((await app.fastify.inject('/api/store/favourites')).statusCode).toBe(404)
+    expect((await app.fastify.inject('/api/store/favourites')).json()).toEqual({ key: 'favourites', exists: false, value: null })
     const put = await app.fastify.inject({ method: 'PUT', url: '/api/store/favourites', payload: { value: ['linear:BTCUSDT'] } })
     expect(put.statusCode).toBe(200)
     const get = await app.fastify.inject('/api/store/favourites')
@@ -228,6 +228,6 @@ describe('HTTP routes', () => {
     expect((await app.fastify.inject({ method: 'PUT', url: '/api/store/x', payload: {} })).statusCode).toBe(400)
     expect((await app.fastify.inject({ method: 'PUT', url: '/api/store/bad%20key', payload: { value: 1 } })).statusCode).toBe(400)
     expect((await app.fastify.inject({ method: 'DELETE', url: '/api/store/favourites' })).json().deleted).toBe(true)
-    expect((await app.fastify.inject('/api/store/favourites')).statusCode).toBe(404)
+    expect((await app.fastify.inject('/api/store/favourites')).json().exists).toBe(false)
   })
 })

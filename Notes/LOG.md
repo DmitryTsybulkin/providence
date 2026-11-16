@@ -73,3 +73,18 @@ Decisions, surprises and the doc URLs used. Newest milestone at the bottom.
 - Gap refetch after reconnect lives in the browser adapter: it replays REST candles from the last seen open time
   (max 1000). A larger hole is detected by the chart (non-contiguous candle) and triggers a reload.
 - `config.json` gained `bybit.wsHost` (needed by the alert engine); documented in README.
+
+## M2 Asset list (2026-11-16)
+
+- Table: favourite star, symbol, last, 24h %, turnover, volume, funding (linear only). Default sort: turnover desc.
+- Row building (join symbols + tickers, search, favourites filter, sort) is a pure function `buildAssetRows` with tests;
+  rows without a ticker always sort last.
+- Virtualized with `@tanstack/react-virtual` (≈40 DOM rows for 821 symbols).
+- Tickers poll every 5 s while the tab is visible; the server cache is also 5 s, so Bybit sees at most one call per 5 s.
+- Persistence: `favourites`, `assetList` (category, sort, favourites-only), `settings` (language), `layout` in `/api/store`.
+  Writes are debounced (500 ms) and **disabled until the saved state has been loaded**, so defaults used while the
+  server is down can never overwrite saved state. Boot retries every 3 s until the server answers.
+- `GET /api/store/:key` for a missing key returns `200 { exists: false, value: null }` instead of 404 —
+  a first run is not an error and it keeps the browser console clean.
+- Banner: "local server unreachable" (REST call failed / proxy 5xx) or "Bybit unreachable — cached data" (`stale: true`).
+  `[[UI SPEC]] §7` (banner design) is not in the repo, so this is a plain one-line bar under the top bar.
