@@ -149,3 +149,47 @@ Decisions, surprises and the doc URLs used. Newest milestone at the bottom.
 - Max 10 indicators per chart: the picker disables further entries and shows a warning line.
 - Indicator and parameter names go through i18n with the def's own label as fallback, so an indicator added to
   `packages/indicators` shows up without touching the translation files.
+
+## M5 Drawings (2026-11-16)
+
+**Built-in overlays of klinecharts 9.8.12** (`getSupportedOverlays()`, 15):
+`fibonacciLine, horizontalRayLine, horizontalSegment, horizontalStraightLine, parallelStraightLine, priceChannelLine,
+priceLine, rayLine, segment, straightLine, verticalRayLine, verticalSegment, verticalStraightLine, simpleAnnotation, simpleTag`.
+
+Corrected drawings.md §2 table:
+
+| Group | Tools | Source |
+|---|---|---|
+| Lines | segment (trend line), rayLine, straightLine, horizontal straight/ray/segment, vertical straight/ray/segment, priceLine | built-in |
+| Channels | parallelStraightLine, priceChannelLine | built-in |
+| Fibonacci | fibonacciLine (retracement) — **the only Fibonacci tool the pinned version ships** | built-in |
+| Forecast | longPosition, shortPosition, priceRange, dateRange | custom `registerOverlay` |
+| Annotate | simpleAnnotation, simpleTag | built-in |
+| Annotate | text, arrow — not built in | custom `registerOverlay` |
+
+**Surprises**
+- An overlay point is resolved by `timestamp` when it has one (nearest loaded candle), otherwise by `dataIndex`.
+  Points right of the last candle have **no timestamp**, so they cannot be stored in data coordinates as-is and
+  would drift as candles arrive. The engine keeps canonical `{timestamp, value}` shapes (future timestamps
+  extrapolated with the bar interval, `chart/anchor.ts`) and re-anchors overlays on `onDataReady` whenever the
+  loaded range changes: in-range points by timestamp, out-of-range points by extrapolated index.
+- Right-click deletes an overlay by default; `onRightClick` returns `true` to stop that.
+- The library advances a drawing step on click but tracks the point through mouse-move events — relevant only for
+  automated testing (a click with no preceding move does not place the next point).
+
+**Decisions**
+- Long/short position: three clicks — entry, stop, take. Until the take is placed it is previewed at 2R.
+  R:R and % come from `positionStats` in core (tested against the worked example in drawings.md §4) and are
+  recomputed on every redraw, so they update live while dragging. Both tools share one implementation; the colours
+  follow the role of each level (stop zone red, target zone green).
+- Storage: `drawings:<category>:<symbol>` in the KV store, debounced 500 ms. One store entry per symbol, shared by
+  every cell and timeframe; a change in one cell is re-applied to other cells showing the same symbol.
+- Undo (Ctrl/Cmd+Z, toolbar button): per-symbol stack of previous drawing lists, depth 50. Not persisted.
+  Typing in the text field commits per keystroke, so undo steps back one character at a time.
+- Style bar (colour, width, solid/dashed, text, lock, delete) appears while a drawing is selected. Positions have
+  fixed colours and only offer lock/delete.
+- "Lock all" and "hide all" are per-cell view toggles and are not persisted; per-drawing lock is persisted.
+- Magnet = KLineChart `weak_magnet` mode.
+- Verified in the browser: long position and trend line drawn with the mouse, restyled, saved, restored after
+  reload, unchanged across 1h → 4h → 15m → 1h, Delete key, undo; all 21 tools render without console errors.
+  **Not** verified by hand: dragging individual points of every tool, magnet mode, lock/hide toggles beyond state.

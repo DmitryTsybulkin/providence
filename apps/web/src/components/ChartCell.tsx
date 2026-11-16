@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { symbolKey, TIMEFRAMES } from '@providence/core'
+import { symbolKey, TIMEFRAMES, type DrawingShape } from '@providence/core'
 import { adapter } from '../api/adapter'
-import { createChartEngine, type ChartEngine } from '../chart'
+import { createChartEngine, drawingHasText, type ChartEngine, type DrawingOptions } from '../chart'
 import { CellController, type CellStatus } from '../lib/cellController'
 import { formatPct, formatPrice, signClass } from '../lib/format'
+import { useDrawings } from '../state/drawings'
 import { useLayout } from '../state/layout'
 import { useMarket } from '../state/market'
 import { useSettings } from '../state/settings'
 import { useWsStatus } from '../state/ws'
+import { DrawingStyleBar, DrawingToolbar } from './Drawings'
 import { GoToDate } from './GoToDate'
 import { IndicatorChips, IndicatorPicker } from './Indicators'
 
@@ -33,6 +35,16 @@ export function ChartCell({ index }: { index: number }) {
   const shown = useRef<string | null>(null)
   const [status, setStatus] = useState<CellStatus>(INITIAL_STATUS)
 
+  // Drawings
+  const entry = useDrawings((s) => s.entries[key])
+  const canUndo = useDrawings((s) => (s.undoStacks[key]?.length ?? 0) > 0)
+  const [tool, setTool] = useState<string | null>(null)
+  const [selected, setSelected] = useState<DrawingShape | null>(null)
+  const [drawOptions, setDrawOptions] = useState<DrawingOptions>({ magnet: false, lockAll: false, hideAll: false })
+  const keyRef = useRef(key)
+  keyRef.current = key
+  const appliedKey = useRef<string | null>(null)
+
   // Engine lifecycle
   useEffect(() => {
     const el = containerRef.current!
@@ -43,7 +55,14 @@ export function ChartCell({ index }: { index: number }) {
     if (import.meta.env.DEV) debugCells[index] = { engine, ctrl }
     const observer = new ResizeObserver(() => engine.resize())
     observer.observe(el)
+    const offDrawings = engine.onDrawingEvent((e) => {
+      if (e.type === 'change') useDrawings.getState().commit(keyRef.current, e.shapes, index)
+      else if (e.type === 'select') setSelected(e.shape)
+      else setTool(null)
+    })
     return () => {
+      offDrawings()
+      appliedKey.current = null
       observer.disconnect()
       ctrl.dispose()
       engine.dispose()
@@ -76,6 +95,58 @@ export function ChartCell({ index }: { index: number }) {
   useEffect(() => {
     engineRef.current?.setIndicators(cell.indicators)
   }, [cell.indicators])
+
+  // Drawings are per symbol: load them, and re-apply whenever another cell or an undo changed them.
+  useEffect(() => {
+    void useDrawings.getState().ensureLoaded(key)
+  }, [key])
+
+  useEffect(() => {
+    const engine = engineRef.current
+    if (!engine) return
+    const ownChange = entry?.origin === index && appliedKey.current === key
+    appliedKey.current = key
+    if (!ownChange) engine.setDrawings(entry?.shapes ?? [])
+  }, [entry, key, index])
+
+  useEffect(() => {
+    engineRef.current?.setDrawingOptions(drawOptions)
+  }, [drawOptions])
+
+  const pickTool = (toolId: string | null) => {
+    const engine = engineRef.current
+    if (!engine) return
+    if (toolId === null) {
+      engine.cancelDrawing()
+      setTool(null)
+      return
+    }
+    const started = engine.startDrawing(toolId, drawingHasText(toolId) ? t('drawings.defaultText') : undefined)
+    setTool(started ? toolId : null)
+  }
+
+  // Keyboard: Delete removes the selected drawing, Esc cancels the tool, Ctrl/Cmd+Z undoes (active cell only).
+  const selectedId = selected?.id ?? null
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (useLayout.getState().active !== index) return
+      const target = e.target as HTMLElement | null
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)) return
+      const engine = engineRef.current
+      if (!engine) return
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
+        e.preventDefault()
+        engine.removeDrawing(selectedId)
+      } else if (e.key === 'Escape') {
+        engine.cancelDrawing()
+      } else if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault()
+        useDrawings.getState().undo(keyRef.current)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [index, selectedId])
 
   const { setTf } = useLayout.getState()
 
@@ -114,7 +185,27 @@ export function ChartCell({ index }: { index: number }) {
       </div>
       <IndicatorChips index={index} />
       <div className="chart-body">
+        <DrawingToolbar
+          tool={tool}
+          options={drawOptions}
+          canUndo={canUndo}
+          hasDrawings={(entry?.shapes.length ?? 0) > 0}
+          onPick={pickTool}
+          onOptions={(patch) => setDrawOptions((o) => ({ ...o, ...patch }))}
+          onUndo={() => useDrawings.getState().undo(key)}
+          onClear={() => {
+            engineRef.current?.setDrawings([])
+            useDrawings.getState().commit(key, [], index)
+          }}
+        />
         <div className="chart-canvas" ref={containerRef} />
+        {selected && (
+          <DrawingStyleBar
+            shape={selected}
+            onPatch={(patch) => engineRef.current?.updateDrawing(selected.id, patch)}
+            onDelete={() => engineRef.current?.removeDrawing(selected.id)}
+          />
+        )}
         {(status.loading || status.error || status.empty) && (
           <div className={`chart-overlay${status.loading ? ' passive' : ''}`}>
             {status.loading ? (

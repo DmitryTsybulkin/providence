@@ -140,3 +140,19 @@ button:disabled { cursor: default; opacity: 0.45; }
 .field > span { color: var(--muted); }
 .field .input, .field select { width: 150px; }
 select.input { padding: 0 4px; }
+
+/* drawing toolbar + style bar */
+.draw-bar { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 34px; padding: 4px 0; border-right: 1px solid var(--border); background: var(--panel); flex: none; overflow: visible; z-index: 6; }
+.draw-btn { width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius); color: var(--muted); flex: none; }
+.draw-btn:hover:not(:disabled) { background: var(--hover); color: var(--text); }
+.draw-btn.active { background: var(--panel-2); color: var(--accent); }
+.draw-btn.on { color: var(--warn); }
+.draw-sep { width: 18px; height: 1px; margin: 4px 0; background: var(--border); }
+.popover.flyout { top: 0; left: calc(100% + 6px); }
+.style-bar { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 8; display: flex; align-items: center; gap: 6px; padding: 4px 6px; background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius); white-space: nowrap; }
+.style-name { color: var(--muted); font-size: 11px; padding: 0 2px; }
+.swatches { display: flex; gap: 3px; }
+.swatch { width: 16px; height: 16px; border-radius: 3px; border: 1px solid transparent; }
+.swatch.active { border-color: #fff; }
+.input.mini { height: 22px; width: auto; padding: 0 2px; font-size: 11px; }
+.input.text { height: 22px; width: 150px; font-size: 12px; }

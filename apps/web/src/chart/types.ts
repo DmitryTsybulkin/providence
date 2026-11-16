@@ -2,7 +2,7 @@
  * ChartEngine: the only way the app talks to the chart library (architecture §4).
  * Nothing in this file refers to klinecharts, so the library stays swappable.
  */
-import type { Candle, IndicatorState } from '@providence/core'
+import type { Candle, DrawingShape, IndicatorState } from '@providence/core'
 
 export interface PageResult {
   candles: Candle[]
@@ -29,6 +29,22 @@ export interface IndicatorSeries {
   /** One row per candle: [time, ...values]; `null` where the indicator has no value */
   data: (number | null)[][]
 }
+
+export type DrawingEvent =
+  /** Drawings were created, moved, restyled or removed by the user. */
+  | { type: 'change'; shapes: DrawingShape[] }
+  | { type: 'select'; shape: DrawingShape | null }
+  /** The active drawing tool finished or was cancelled. */
+  | { type: 'tool-end' }
+
+export interface DrawingOptions {
+  /** Snap new points to candle OHLC values */
+  magnet: boolean
+  lockAll: boolean
+  hideAll: boolean
+}
+
+export type DrawingPatch = Partial<Pick<DrawingShape, 'styles' | 'extendData' | 'lock' | 'visible'>>
 
 export type ChartLocale = 'en' | 'ru'
 
@@ -61,6 +77,17 @@ export interface ChartEngine {
   setIndicators(list: IndicatorState[]): void
   /** Values of every visible indicator for the loaded candles. */
   getIndicatorData(): IndicatorSeries[]
+
+  /** Start placing a drawing with the given tool; the next clicks on the chart set its points. */
+  startDrawing(toolId: string, extendData?: unknown): boolean
+  cancelDrawing(): void
+  /** Replace all drawings (e.g. after loading a symbol or an undo). Does not emit a change event. */
+  setDrawings(shapes: DrawingShape[]): void
+  getDrawings(): DrawingShape[]
+  updateDrawing(id: string, patch: DrawingPatch): void
+  removeDrawing(id: string): void
+  setDrawingOptions(options: Partial<DrawingOptions>): void
+  onDrawingEvent(cb: (e: DrawingEvent) => void): () => void
 
   setLocale(locale: ChartLocale): void
   resize(): void

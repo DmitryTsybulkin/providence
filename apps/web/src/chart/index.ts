@@ -8,3 +8,7 @@ export function createChartEngine(container: HTMLElement, options: ChartEngineOp
 }
 
 export { getIndicatorDef, indicatorCaption, listIndicatorDefs } from './indicators'
+export {
+  DEFAULT_DRAWING_STYLE, DRAWING_TOOLS, drawingHasLineStyle, drawingHasText, drawingLineKind, fromShapeStyles,
+  toShapeStyles, type DrawingStyle,
+} from './overlays'
