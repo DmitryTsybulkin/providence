@@ -30,3 +30,46 @@ Decisions, surprises and the doc URLs used. Newest milestone at the bottom.
 - `ChartState` has no `drawings` field: chart.md §3 puts drawings in the cell state, drawings.md §3 stores them per
   symbol under `drawings:<category>:<symbol>` and shares them across timeframes. drawings.md is more specific → followed it.
 - `Panel.component` is `React.FC` as specified; core only has a type-level dependency on `@types/react`.
+
+## M1 Data (2026-11-16)
+
+**Bybit docs used** (all under https://bybit-exchange.github.io/docs/v5/)
+- `market/kline` — `GET /v5/market/kline`; params `category, symbol, interval, start, end, limit [1,1000]`;
+  `list` rows are string arrays `[startTime, open, high, low, close, volume, turnover]`, sorted newest first.
+- `market/instrument` — `GET /v5/market/instruments-info`; default page 500, max `limit` 1000, `nextPageCursor`;
+  "Spot does not support pagination".
+- `market/tickers` — `lastPrice, price24hPcnt, highPrice24h, lowPrice24h, turnover24h, volume24h, fundingRate, nextFundingTime`.
+- `websocket/public/kline` — topic `kline.{interval}.{symbol}`, `confirm` = candle closed, push every 1–60 s.
+- `websocket/public/ticker` — topic `tickers.{symbol}`; linear sends `snapshot` then `delta` (unchanged fields omitted).
+- `ws/connect` — `wss://stream.bybit.com/v5/public/{linear|spot}`, heartbeat `{"op":"ping"}` every 20 s.
+- `rate-limit`, `error` — HTTP 429 / `retCode 10006` "Too many visits"; HTTP 403 "access too frequent" = IP ban (~10 min).
+
+**CORS check (asked for in market-data §3)**
+- `curl -H "Origin: http://localhost:5173" https://api.bybit.com/v5/market/time` →
+  `access-control-allow-origin: http://localhost:5173`, `access-control-allow-credentials: true`.
+  **Bybit REST does allow CORS from localhost.** REST still goes through the local server, because the
+  server provides the cache, the rate-limit backoff and data for alerts while the tab is closed.
+
+**Surprises**
+- Bybit's `linear` category is not only USDT perpetuals: 929 instruments including USDC perps and dated futures.
+  Scope says USDT perps → adapter keeps `contractType === 'LinearPerpetual' && quoteCoin === 'USDT'` (821 symbols).
+  `/api/bybit/tickers` still returns every linear ticker; the web joins tickers to the symbol list.
+- Rate limit `10006` arrives with HTTP 200, so the client inspects `retCode`, not only the status.
+- Linear ticker deltas omit `lastPrice` when it did not change → consumers must keep the last value.
+
+**Decisions**
+- Routes return an envelope `{ data, stale, fetchedAt }`; `stale: true` = Bybit unreachable, cached data served.
+  Upstream failures with nothing cached → HTTP 502 `{ error }`.
+- Candle cache answer is decided by a pure function `planCandleFetch` → `cache` | `tail` | `full`:
+  a page is served from SQLite only when it is contiguous and complete. For the latest page the closed candles
+  come from SQLite and only the forming candle (`start = newest + tf`) is requested from Bybit.
+  Measured on BTCUSDT 1h: history page 190 ms from Bybit, 4 ms from cache.
+- When Bybit returns fewer rows than asked, the oldest row is remembered as the start of history
+  (`cache_meta: history_start:…`) so the oldest page is cacheable too.
+- Symbols cache (1 h) is also persisted in SQLite so the asset list works after a restart without network.
+- Backoff: 3 retries, 500 ms · 2ⁿ, shared pause across concurrent requests; HTTP 403 → 60 s fail-fast cool-down.
+- WS client keeps the socket open 5 s after the last unsubscribe, so switching symbol does not reconnect
+  (Bybit asks not to connect/disconnect frequently). One socket per category, all topics multiplexed.
+- Gap refetch after reconnect lives in the browser adapter: it replays REST candles from the last seen open time
+  (max 1000). A larger hole is detected by the chart (non-contiguous candle) and triggers a reload.
+- `config.json` gained `bybit.wsHost` (needed by the alert engine); documented in README.
