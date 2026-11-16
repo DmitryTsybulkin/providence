@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Banner } from './components/Banner'
-import { ChartCell } from './components/ChartCell'
+import { ChartGrid } from './components/ChartGrid'
 import { TopBar } from './components/TopBar'
 import { AssetList } from './panels/AssetList'
 import { boot, useBoot } from './state/boot'
@@ -31,9 +31,7 @@ export function App() {
       {ready ? (
         <main className="workspace">
           <AssetList />
-          <section className="charts">
-            <ChartCell index={0} />
-          </section>
+          <ChartGrid />
         </main>
       ) : (
         <div className="empty muted">{t('app.loading')}</div>

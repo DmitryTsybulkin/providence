@@ -28,7 +28,7 @@ export const ru: Strings = {
       fundingRate: 'Фандинг',
     },
   },
-  topbar: { language: 'Язык' },
+  topbar: { language: 'Язык', layout: 'Раскладка', layout1: '1 график', layout2: '2 графика рядом', layout4: '4 графика' },
   indicators: {
     title: 'Индикаторы',
     pane: { overlay: 'На графике', separate: 'Отдельная панель' },

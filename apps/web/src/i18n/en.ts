@@ -26,7 +26,7 @@ export const en = {
       fundingRate: 'Funding',
     },
   },
-  topbar: { language: 'Language' },
+  topbar: { language: 'Language', layout: 'Layout', layout1: '1 chart', layout2: '2 charts side by side', layout4: '4 charts' },
   indicators: {
     title: 'Indicators',
     pane: { overlay: 'On the chart', separate: 'Separate pane' },

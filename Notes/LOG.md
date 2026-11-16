@@ -193,3 +193,15 @@ Corrected drawings.md §2 table:
 - Verified in the browser: long position and trend line drawn with the mouse, restyled, saved, restored after
   reload, unchanged across 1h → 4h → 15m → 1h, Delete key, undo; all 21 tools render without console errors.
   **Not** verified by hand: dragging individual points of every tool, magnet mode, lock/hide toggles beyond state.
+
+## M6 Layouts (2026-11-16)
+
+- Layout switcher in the top bar: 1, 2 (side by side), 4 (2×2). The store always holds four cell states, so switching
+  to a smaller layout and back keeps the hidden cells' symbol, timeframe and indicators.
+- The active cell (blue frame) is set on mouse-down in the capture phase and receives asset-list clicks and keyboard
+  shortcuts (Delete, Esc, Ctrl/Cmd+Z).
+- Persisted under `layout`: `{ mode, active, cells[4] }`. Drawings stay per symbol, so two cells showing the same
+  symbol share them live (verified: remove in one cell → gone in the other; undo restores both).
+- One Bybit WebSocket per category serves all cells (topics multiplexed); redraws are throttled per cell.
+- Not done: optional crosshair sync between cells (chart.md §2 marks it optional).
+- Known cosmetic limit: in a 4-chart layout on a small window the drawing toolbar can be taller than the cell.

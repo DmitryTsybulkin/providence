@@ -36,7 +36,13 @@ button:disabled { cursor: default; opacity: 0.45; }
 .brand { font-weight: 600; letter-spacing: 0.02em; }
 .banner { flex: none; padding: 6px 12px; background: #3a2c12; color: #f3d9a4; border-bottom: 1px solid #5a441c; font-size: 12px; }
 .workspace { display: flex; flex: 1 1 auto; min-height: 0; }
-.charts { flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; }
+.charts { flex: 1 1 auto; min-width: 0; min-height: 0; display: grid; gap: 1px; background: var(--border); }
+.charts.grid-1 { grid-template: 1fr / 1fr; }
+.charts.grid-2 { grid-template: 1fr / 1fr 1fr; }
+.charts.grid-4 { grid-template: 1fr 1fr / 1fr 1fr; }
+.cell-frame { display: flex; min-width: 0; min-height: 0; position: relative; }
+.cell-frame.active::after { content: ''; position: absolute; inset: 0; border: 1px solid var(--accent); pointer-events: none; z-index: 20; }
+.seg-btn.icon { display: inline-flex; align-items: center; padding: 0 7px; }
 
 /* controls */
 .input { height: 26px; padding: 0 8px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); outline: none; }
@@ -101,7 +107,7 @@ button:disabled { cursor: default; opacity: 0.45; }
 
 /* chart cell */
 .chart-cell { display: flex; flex-direction: column; flex: 1 1 0; min-width: 0; min-height: 0; background: var(--bg); }
-.chart-head { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 8px; border-bottom: 1px solid var(--border); background: var(--panel); flex: none; }
+.chart-head { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; min-height: 34px; padding: 4px 8px; border-bottom: 1px solid var(--border); background: var(--panel); flex: none; }
 .chart-symbol { font-weight: 600; }
 .chart-quote { font-size: 12px; white-space: nowrap; }
 .chart-body { position: relative; flex: 1 1 auto; min-height: 0; display: flex; }
