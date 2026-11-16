@@ -52,6 +52,13 @@ export const chartStyles: StyleInput = {
   indicator: {
     tooltip: { text: { color: COLORS.text, family: FONT, size: 11 } },
     lastValueMark: { show: false },
+    lines: ['#e8a33d', '#4c8dff', '#c264d6', '#2ebd85', '#f6465d'].map((color) => ({
+      style: 'solid' as never,
+      smooth: false,
+      size: 1,
+      dashedValue: [2, 2],
+      color,
+    })),
     bars: [{ upColor: 'rgba(46,189,133,0.6)', downColor: 'rgba(246,70,93,0.6)', noChangeColor: COLORS.flat }],
   },
   xAxis: {

@@ -1,8 +1,9 @@
-import { dispose, init, LoadDataType, type Chart, type KLineData } from 'klinecharts'
-import type { Candle } from '@providence/core'
+import { dispose, init, LoadDataType, type Chart, type Indicator, type KLineData } from 'klinecharts'
+import type { Candle, IndicatorState } from '@providence/core'
+import { ensureIndicatorsRegistered, getIndicatorDef, toKLineSpec } from './indicators'
 import { ensureLocales, localeName } from './locale'
 import { chartStyles, COLORS } from './theme'
-import type { ChartEngine, ChartEngineOptions, ChartLocale, PageResult, SetDataOptions } from './types'
+import type { ChartEngine, ChartEngineOptions, ChartLocale, IndicatorSeries, PageResult, SetDataOptions } from './types'
 
 export function toKLine(c: Candle): KLineData {
   return { timestamp: c.t, open: c.o, high: c.h, low: c.l, close: c.c, volume: c.v }
@@ -20,12 +21,17 @@ export class KLineEngine implements ChartEngine {
   private newerMore = false
   private loadOlder: ((oldest: Candle) => Promise<PageResult>) | null = null
   private loadNewer: ((newest: Candle) => Promise<PageResult>) | null = null
+  private pricePrecision = 2
+  private indicators: IndicatorState[] = []
+  private indicatorSignature = ''
+  private appliedIndicators: { id: string; paneId: string; name: string; calcParams: number[] }[] = []
 
   constructor(
     protected readonly container: HTMLElement,
     options: ChartEngineOptions,
   ) {
     ensureLocales()
+    ensureIndicatorsRegistered()
     const chart = init(container, { locale: localeName(options.locale), styles: chartStyles })
     if (!chart) throw new Error('Failed to initialise the chart')
     this.chart = chart
@@ -55,6 +61,46 @@ export class KLineEngine implements ChartEngine {
 
   setPrecision(price: number, volume: number): void {
     this.chart.setPriceVolumePrecision(price, volume)
+    if (price !== this.pricePrecision) {
+      this.pricePrecision = price
+      this.setIndicators(this.indicators) // some indicators derive their precision from the price
+    }
+  }
+
+  setIndicators(list: IndicatorState[]): void {
+    this.indicators = list
+    const signature = `${this.pricePrecision}|${JSON.stringify(list)}`
+    if (signature === this.indicatorSignature) return
+    this.indicatorSignature = signature
+
+    for (const a of this.appliedIndicators) this.chart.removeIndicator(a.paneId, a.name)
+    this.appliedIndicators = []
+    for (const state of list) {
+      const def = getIndicatorDef(state.id)
+      if (!def || !state.visible) continue
+      const spec = toKLineSpec(def, state.params, this.pricePrecision)
+      const overlay = def.pane === 'overlay'
+      const paneId = this.chart.createIndicator(
+        spec,
+        overlay, // stack on the candle pane
+        overlay ? { id: 'candle_pane' } : { id: `pane_${def.id}`, height: 110, minHeight: 48 },
+      )
+      if (paneId) this.appliedIndicators.push({ id: def.id, paneId, name: spec.name, calcParams: spec.calcParams })
+    }
+  }
+
+  getIndicatorData(): IndicatorSeries[] {
+    const candles = this.chart.getDataList()
+    return this.appliedIndicators.flatMap((a) => {
+      const indicator = this.chart.getIndicatorByPaneId(a.paneId, a.name) as Indicator | null
+      if (!indicator || !Array.isArray(indicator.result)) return []
+      const keys = indicator.figures.map((f) => f.key)
+      const data = candles.map((c, i) => {
+        const row = (indicator.result[i] ?? {}) as Record<string, number | undefined>
+        return [c.timestamp, ...keys.map((k) => (typeof row[k] === 'number' && Number.isFinite(row[k]) ? (row[k] as number) : null))]
+      })
+      return [{ id: a.id, name: indicator.shortName || a.name, params: a.calcParams, keys, data }]
+    })
   }
 
   setData(candles: Candle[], opts: SetDataOptions): Promise<void> {

@@ -58,6 +58,8 @@ function fakeEngine() {
     scrollToRealTime() {},
     getRightEdgeTime: () => null,
     visibleBarCount: () => state.visible,
+    setIndicators() {},
+    getIndicatorData: () => [],
     setLocale() {},
     resize() {},
     screenshot: () => '',

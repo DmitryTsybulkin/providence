@@ -10,6 +10,7 @@ import { useMarket } from '../state/market'
 import { useSettings } from '../state/settings'
 import { useWsStatus } from '../state/ws'
 import { GoToDate } from './GoToDate'
+import { IndicatorChips, IndicatorPicker } from './Indicators'
 
 /** Dev-only handle for poking at charts from the browser console: `__providence.cells[0].engine`. */
 const debugCells: Record<number, { engine: ChartEngine; ctrl: CellController }> = {}
@@ -72,6 +73,10 @@ export function ChartCell({ index }: { index: number }) {
     engineRef.current?.setLocale(language)
   }, [language])
 
+  useEffect(() => {
+    engineRef.current?.setIndicators(cell.indicators)
+  }, [cell.indicators])
+
   const { setTf } = useLayout.getState()
 
   return (
@@ -92,6 +97,7 @@ export function ChartCell({ index }: { index: number }) {
             </button>
           ))}
         </div>
+        <IndicatorPicker index={index} />
         <GoToDate onGo={(time) => void ctrlRef.current?.goTo(time)} />
         <span className="grow" />
         {wsStatus === 'reconnecting' && <span className="badge warn">{t('chart.reconnecting')}</span>}
@@ -106,6 +112,7 @@ export function ChartCell({ index }: { index: number }) {
           </>
         )}
       </div>
+      <IndicatorChips index={index} />
       <div className="chart-body">
         <div className="chart-canvas" ref={containerRef} />
         {(status.loading || status.error || status.empty) && (

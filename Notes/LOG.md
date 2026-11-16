@@ -120,3 +120,32 @@ Decisions, surprises and the doc URLs used. Newest milestone at the bottom.
 - Live feed hole detection: if a live candle is more than one bar ahead of the chart's last candle, the cell reloads.
 - Verified in the browser: BTCUSDT 1h paged back 7 pages (8000 candles, ≈ 11 months) in ~6 s with 0 holes; all 7
   timeframes load; live 1m candle updates.
+
+## M4 Indicators (2026-11-16)
+
+**Built-in indicator list of klinecharts 9.8.12** (`getSupportedIndicators()`, resolves the open question in chart.md §11):
+`AVP AO BIAS BOLL BRAR BBI CCI CR DMA DMI EMV EMA MTM MA MACD OBV PVT PSY ROC RSI SMA KDJ SAR TRIX VOL VR WR`.
+
+| chart.md §2 | How it is provided |
+|---|---|
+| EMA, SMA, BB, MACD, Volume | built-in (`EMA`, `MA`, `BOLL`, `MACD`, `VOL`) |
+| VWAP | **custom** — built-in `AVP` needs turnover and is not a session VWAP |
+| ATR | **custom** — not built in |
+| RSI | **custom** — built-in `RSI` is the simple-average (Cutler) variant; TradingView/Bybit use Wilder's smoothing |
+| Stoch | **custom** — built-in `KDJ` is a different oscillator (adds J, fixed smoothing) |
+| extra | Parabolic SAR, CCI, OBV built-ins exposed so the 10-indicator limit is reachable |
+
+**Decisions**
+- Custom indicators live in `packages/indicators` as plain objects (`IndicatorDef` + template). The package declares
+  the template shape structurally and does not import klinecharts; `apps/web/src/chart/indicators.ts` registers them.
+- All custom maths comes from `packages/core` (`rsi`, `atr`, `stoch`, `vwap`) — the same functions the alert engine
+  uses. A test compares chart-template output with `computeAlertIndicator` on a fixed candle set (alerts.md §6).
+- RSI is verified against the classic Wilder reference series (70.46, 66.25, …) in `core.test.ts`. A live spot-check
+  against Bybit's own chart (chart.md §6) was **not** done — it needs a manual look at bybit.com.
+- KLineChart allows one indicator of a given name per pane, so SMA/EMA take up to three lengths (0 = off) instead of
+  being added several times.
+- `setIndicators` is idempotent: it removes and re-creates indicators only when the list or the price precision
+  changes. Hidden indicators stay in the cell state but are not created on the chart.
+- Max 10 indicators per chart: the picker disables further entries and shows a warning line.
+- Indicator and parameter names go through i18n with the def's own label as fallback, so an indicator added to
+  `packages/indicators` shows up without touching the translation files.

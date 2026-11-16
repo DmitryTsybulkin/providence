@@ -2,7 +2,7 @@
  * ChartEngine: the only way the app talks to the chart library (architecture §4).
  * Nothing in this file refers to klinecharts, so the library stays swappable.
  */
-import type { Candle } from '@providence/core'
+import type { Candle, IndicatorState } from '@providence/core'
 
 export interface PageResult {
   candles: Candle[]
@@ -17,6 +17,17 @@ export interface SetDataOptions {
   newerMore: boolean
   /** Put the candle at this time at the right edge once the data is in; default = latest candle. */
   scrollTo?: number
+}
+
+/** Computed values of one indicator, for export. */
+export interface IndicatorSeries {
+  id: string
+  name: string
+  params: number[]
+  /** Value column names, e.g. ["ma1", "ma2"] */
+  keys: string[]
+  /** One row per candle: [time, ...values]; `null` where the indicator has no value */
+  data: (number | null)[][]
 }
 
 export type ChartLocale = 'en' | 'ru'
@@ -45,6 +56,11 @@ export interface ChartEngine {
   /** Open time of the candle at the right edge, or `null` when the latest candle is in view. */
   getRightEdgeTime(): number | null
   visibleBarCount(): number
+
+  /** Apply the cell's indicator list (hidden ones are not drawn). Idempotent. */
+  setIndicators(list: IndicatorState[]): void
+  /** Values of every visible indicator for the loaded candles. */
+  getIndicatorData(): IndicatorSeries[]
 
   setLocale(locale: ChartLocale): void
   resize(): void

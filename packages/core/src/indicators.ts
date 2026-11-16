@@ -3,7 +3,7 @@
  * and the server alert engine, so both always compute the same numbers.
  * All functions are pure and return one value per input row; `null` = not enough data yet.
  */
-import type { Candle } from './types'
+import type { Candle, ParamSchema, ParamValues } from './types'
 
 export type Series = (number | null)[]
 
@@ -214,4 +214,24 @@ export function computeAlertIndicator(id: string, length: number, candles: Candl
     default:
       throw new Error(`Unknown alert indicator: ${id}`)
   }
+}
+
+// ---------- Parameters ----------
+
+/** Resolve user values against a schema: missing/invalid → default, clamped to [min, max]. Order follows the schema. */
+export function resolveParams(schema: ParamSchema, values: ParamValues | undefined): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const [key, def] of Object.entries(schema)) {
+    let v = Number(values?.[key])
+    if (values?.[key] === undefined || values?.[key] === '' || !Number.isFinite(v)) v = def.default
+    if (def.min !== undefined) v = Math.max(def.min, v)
+    if (def.max !== undefined) v = Math.min(def.max, v)
+    out[key] = v
+  }
+  return out
+}
+
+/** Resolved parameters as an ordered list (the chart library's `calcParams`). */
+export function paramList(schema: ParamSchema, values: ParamValues | undefined): number[] {
+  return Object.values(resolveParams(schema, values))
 }

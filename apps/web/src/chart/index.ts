@@ -6,3 +6,5 @@ export type * from './types'
 export function createChartEngine(container: HTMLElement, options: ChartEngineOptions): ChartEngine {
   return new KLineEngine(container, options)
 }
+
+export { getIndicatorDef, indicatorCaption, listIndicatorDefs } from './indicators'
