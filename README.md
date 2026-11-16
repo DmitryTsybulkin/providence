@@ -38,6 +38,19 @@ Optional configuration: copy `apps/server/config.example.json` to `apps/server/c
 | `bybit.restHost` | `https://api.bybit.com` | Bybit REST host |
 | `bybit.wsHost` | `wss://stream.bybit.com` | Bybit WebSocket host (used by the alert engine) |
 
+## macOS notifications
+
+Alerts are delivered as a toast in the app and as a macOS notification. macOS only shows notifications from apps it
+has registered, and it drops the rest **silently**. Providence sends through `terminal-notifier` (bundled with
+node-notifier) and falls back to AppleScript (`display notification`, shown as coming from *Script Editor*).
+On a Mac where neither has ever asked for permission, nothing appears. One-time setup:
+
+1. Open **Script Editor** (in /Applications/Utilities), paste `display notification "hello" with title "Providence"`
+   and press Run. macOS asks whether Script Editor may send notifications — choose **Allow**.
+2. Check **System Settings → Notifications → Script Editor**: notifications allowed, style Banners or Alerts.
+3. Make sure no Focus mode (Do Not Disturb) is active.
+4. In Providence open **Alerts** and press **Send a test macOS notification**.
+
 ## Develop
 
 ```bash

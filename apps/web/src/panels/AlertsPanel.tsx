@@ -31,6 +31,17 @@ export function AlertsPanel() {
   const history = useAlerts((s) => s.history)
   const connected = useAlerts((s) => s.connected)
   const [tab, setTab] = useState<'alerts' | 'history'>('alerts')
+  const [testResult, setTestResult] = useState<string | null>(null)
+  const testNotification = async () => {
+    setTestResult(null)
+    try {
+      const res = await fetch('/api/alerts/test-notification', { method: 'POST' })
+      const body = (await res.json().catch(() => ({}))) as { error?: string }
+      setTestResult(res.ok ? t('alerts.testSent') : t('alerts.testFailed', { error: body.error ?? `HTTP ${res.status}` }))
+    } catch (err) {
+      setTestResult(t('alerts.testFailed', { error: String(err) }))
+    }
+  }
   const { setStatus, remove, clearHistory, openDraft } = useAlerts.getState()
 
   const newAlert = () => {
@@ -62,6 +73,12 @@ export function AlertsPanel() {
         )}
       </div>
       {!connected && <div className="panel-note warn">{t('alerts.paused')}</div>}
+      <div className="panel-note">
+        <button className="tool-btn" onClick={() => void testNotification()}>
+          {t('alerts.test')}
+        </button>
+        {testResult && <div className="muted small">{testResult}</div>}
+      </div>
       <div className="alerts-scroll">
         {tab === 'alerts' ? (
           alerts.length === 0 ? (

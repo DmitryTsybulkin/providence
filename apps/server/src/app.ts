@@ -110,11 +110,12 @@ export function buildApp(deps: AppDeps): App {
 
   // ---------- alerts ----------
   const alertStore = new AlertStore(db)
+  const extraChannels = deps.channels ?? [new OsChannel()]
   const alerts: AlertEngine = new AlertEngine({
     store: alertStore,
     feed: deps.feed ?? new BybitFeed(config.bybit.wsHost),
     loadCandles: async (q) => (await candles.get(q)).candles,
-    channels: [new InAppChannel(broadcast, (id) => alerts.list().find((a) => a.id === id)), ...(deps.channels ?? [new OsChannel()])],
+    channels: [new InAppChannel(broadcast, (id) => alerts.list().find((a) => a.id === id)), ...extraChannels],
     onChange: () => broadcast({ type: 'alerts-changed' }),
     log: (m) => fastify.log.warn(m),
   })
@@ -146,6 +147,18 @@ export function buildApp(deps: AppDeps): App {
   fastify.delete('/api/alerts/history', async () => {
     alertStore.clearHistory()
     broadcast({ type: 'alerts-changed' })
+    return { ok: true }
+  })
+
+  /** Send a sample notification through the OS channel so the user can check that macOS shows it. */
+  fastify.post('/api/alerts/test-notification', async () => {
+    const os = extraChannels.find((c) => c.id === 'os')
+    if (!os) throw notFound('no OS notification channel')
+    const now = Date.now()
+    await os.send({
+      id: 'test', alertId: 'test', category: 'linear', symbol: 'TEST', firedAt: now, price: 0, value: 0, threshold: 0,
+      message: 'Test notification — alerts will look like this.',
+    })
     return { ok: true }
   })
 

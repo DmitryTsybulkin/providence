@@ -26,10 +26,11 @@ Everything below was exercised in the browser at http://localhost:5173 against l
 
 ## What does not work or is not confirmed
 
-- **macOS notification is not confirmed.** node-notifier's bundled `terminal-notifier` was refused by macOS
-  ("Notifications are not allowed for this application"). A fallback to AppleScript `display notification` was added
-  and runs without error, but nobody has seen the banner appear. It may need notifications to be allowed for
-  terminal-notifier or Script Editor in System Settings.
+- **macOS notifications do not appear on this Mac yet.** Confirmed by the user. Cause: neither `terminal-notifier`
+  (used by node-notifier) nor Script Editor (the sender for the AppleScript fallback) is registered with Notification
+  Center here (0 of 142 registered apps), so macOS drops the notifications silently — `osascript` still exits 0.
+  This needs a one-time permission that only the user can give; steps are in README, "macOS notifications".
+  The Alerts panel has a "Send a test macOS notification" button to check afterwards. In-app toasts work.
 - **"Bybit unreachable" banner is untested.** The "local server unreachable" banner was tested by stopping the
   server. The stale-cache path (`stale: true`) is covered by unit tests only.
 - **Reconnect after network off/on was not tested by hand.** WebSocket reconnect, resubscribe and gap refetch are
@@ -82,7 +83,7 @@ local server for the cache, backoff and tab-closed alerts.
 
 ## Next steps
 
-1. Confirm the macOS notification on this Mac; consider running the server as a launchd service (alerts.md §6).
+1. Allow notifications for Script Editor (README) and confirm with the test button; consider running the server as a launchd service (alerts.md §6).
 2. Manual pass over every drawing tool (drag points, magnet) and the remaining untested paths listed above.
 3. Spot-check EMA/RSI on BTCUSDT 1h against Bybit's chart.
 4. Decide the licence (MIT or Apache-2.0) before publishing — architecture §11.

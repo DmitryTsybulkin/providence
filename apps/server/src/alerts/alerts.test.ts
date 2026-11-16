@@ -334,6 +334,18 @@ describe('alert routes', () => {
     expect((await app.fastify.inject({ method: 'DELETE', url: `/api/alerts/${id}` })).statusCode).toBe(200)
     expect((await app.fastify.inject({ method: 'DELETE', url: `/api/alerts/${id}` })).statusCode).toBe(404)
   })
+  it('sends a test notification through the OS channel only', async () => {
+    const sent: FiredAlert[] = []
+    const app = buildApp({
+      config: DEFAULT_CONFIG, db: openDb(':memory:'), rest: {} as BybitRest, feed: fakeFeed().feed,
+      channels: [{ id: 'os', send: async (x) => void sent.push(x) }],
+    })
+    expect((await app.fastify.inject({ method: 'POST', url: '/api/alerts/test-notification' })).json()).toEqual({ ok: true })
+    expect(sent).toHaveLength(1)
+    expect((await app.fastify.inject('/api/alerts/history')).json().history).toHaveLength(0)
+    const none = setupApp() // its only extra channel is "test"
+    expect((await none.app.fastify.inject({ method: 'POST', url: '/api/alerts/test-notification' })).statusCode).toBe(404)
+  })
   it('rejects invalid alerts with 400', async () => {
     const { app } = setupApp()
     const res = await app.fastify.inject({ method: 'POST', url: '/api/alerts', payload: { type: 'price', category: 'linear', symbol: 'BTCUSDT' } })

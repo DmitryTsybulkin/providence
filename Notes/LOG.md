@@ -261,3 +261,13 @@ Corrected drawings.md §2 table:
   recomputed on the imported candles. Drawings of the cell's symbol stay visible on top.
 - Verified in the browser: three files with correct names and contents (1000 rows, VOL indicator in JSON, PNG data
   URL), bad file rejected with a message, exported JSON re-opened and closed again.
+
+## After M8: macOS notification follow-up (2026-11-16)
+
+- The user confirmed that no macOS notification appeared. Diagnosis (read-only): `~/Library/Preferences/com.apple.ncprefs.plist`
+  lists 142 registered apps; neither `fr.julienxx.oss.terminal-notifier` nor Script Editor is among them (macOS 27.2.1).
+  terminal-notifier reports "Notifications are not allowed for this application"; `osascript -e 'display notification …'`
+  exits 0 but the notification is dropped. The server cannot detect this.
+- Not fixable from code and not something to change on the user's behalf (system notification settings).
+  Added: README section "macOS notifications" with the one-time setup, `POST /api/alerts/test-notification`
+  (sends through the OS channel only, no history entry) and a button for it in the Alerts panel.
