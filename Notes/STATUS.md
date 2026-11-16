@@ -7,5 +7,5 @@
 - [x] M4 Indicators — picker, overlay + pane, params dialog, hide/remove, max 10; custom VWAP, ATR, RSI (Wilder), Stochastic via registerIndicator
 - [x] M5 Drawings — left toolbar (21 tools: 15 built-in + 6 custom), long/short with live R:R and %, price/date range, style bar, delete, undo, per-symbol persistence shared across timeframes
 - [x] M6 Layouts — 1 / 2 / 4 charts, per-cell symbol + tf + indicators, active cell receives asset clicks, persisted
-- [ ] M7 Alerts
+- [x] M7 Alerts — server engine on Bybit WS; price, line-cross and indicator (candle close) alerts; once/every, expiry; panel with history; in-app + OS notification
 - [ ] M8 Export

@@ -6,7 +6,10 @@ const app = buildApp({ config, logger: true })
 
 app.fastify
   .listen({ host: HOST, port: config.port })
-  .then(() => app.fastify.log.info(`Providence server on http://${HOST}:${config.port} (db: ${config.dbPath})`))
+  .then(() => {
+    app.alerts.start()
+    app.fastify.log.info(`Providence server on http://${HOST}:${config.port} (db: ${config.dbPath})`)
+  })
   .catch((err) => {
     app.fastify.log.error(err)
     process.exit(1)
@@ -14,6 +17,7 @@ app.fastify
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {
+    app.alerts.stop()
     void app.fastify.close().finally(() => {
       app.db.close()
       process.exit(0)

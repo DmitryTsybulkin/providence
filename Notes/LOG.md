@@ -205,3 +205,43 @@ Corrected drawings.md §2 table:
 - One Bybit WebSocket per category serves all cells (topics multiplexed); redraws are throttled per cell.
 - Not done: optional crosshair sync between cells (chart.md §2 marks it optional).
 - Known cosmetic limit: in a 4-chart layout on a small window the drawing toolbar can be taller than the cell.
+
+## M7 Alerts (2026-11-16)
+
+**Design**
+- `AlertEngine` (apps/server/src/alerts) runs inside the server and reads live data through a `MarketFeed`
+  interface; `BybitFeed` implements it on the public WebSocket (`tickers.{symbol}` for price, `kline.{interval}.{symbol}`
+  with `confirm=true` for closed candles). Subscriptions follow the set of active alerts.
+- Price and line alerts are checked on every ticker update; indicator alerts once per closed candle.
+- Conditions: `cross` (either direction), `above`, `below`.
+  - Price/line: `above`/`below` are **edge-triggered** (fire on entering the zone, or immediately if already in it when
+    the alert is created) — at 10 ticks/s a level check would fire constantly.
+  - Indicator: `above`/`below` are checked as a **level at each candle close** (alerts.md: "RSI 14 > 70 on candle
+    close, once per candle"); `cross` compares with the previous candle's value.
+- De-duplication (alerts.md §6): `lastFiredCandle` is stored with the alert — the candle open time for indicator
+  alerts, a 1-minute bucket for price/line alerts. "Every time" price alerts therefore fire at most once per minute.
+  Previous observations are kept in memory across WebSocket reconnects, so a reconnect cannot fake a cross.
+  After a server restart the first observation of an alert that has fired before only re-arms it.
+- Line alerts store the line geometry and the drawing id. The web app posts a symbol's lines to
+  `/api/alerts/sync-lines` whenever its drawings change: a moved line updates the alert (without counting the jump as
+  a cross), a deleted line pauses it. Line value in time comes from `lineValueAt` in core (segment / ray / extended).
+- Indicator alerts support RSI, EMA, SMA, ATR with the shared maths from `packages/core`
+  (`computeAlertIndicator`), on 300–1000 closed candles loaded through the server's candle cache.
+- Channels implement `AlertChannel`: in-app (server → web over the `/events` WebSocket, toast + panel) and OS.
+- Routes: `GET/POST /api/alerts`, `PATCH/DELETE /api/alerts/:id`, `GET/DELETE /api/alerts/history`,
+  `POST /api/alerts/sync-lines`, WebSocket `/events`.
+- Alert messages are generated on the server in English (they go to the OS notification and the history);
+  the alert list in the panel is localised.
+
+**Surprises**
+- node-notifier's bundled `terminal-notifier` failed on this Mac: "Could not request notification permission:
+  Notifications are not allowed for this application". Added a fallback to AppleScript `display notification` via
+  `/usr/bin/osascript`. After that the OS channel logged no error, but **nobody has confirmed that a banner was
+  actually shown** — it depends on the notification settings of this Mac.
+
+**Verified on live Bybit data**
+- Price alert created in the UI fired 1.1 s after creation (condition already true), toast shown, status → Triggered.
+- Line alert on a horizontal line fired on the next tick.
+- RSI(14) 1m "every time" alert fired at 21:12:00.637 and 21:13:00.580 UTC — once per candle, ~0.6 s after close.
+- Not tested by hand: tab closed while an alert fires (the engine does not depend on the tab), the bell button on
+  the drawing style bar, expiry in the UI.

@@ -1,6 +1,12 @@
+import websocket from '@fastify/websocket'
 import Fastify, { type FastifyInstance } from 'fastify'
 import { BybitRest } from '@providence/adapter-bybit'
-import { CATEGORIES, TIMEFRAMES, type Category, type Timeframe } from '@providence/core'
+import { CATEGORIES, TIMEFRAMES, type AlertChannel, type Category, type ServerEvent, type Timeframe } from '@providence/core'
+import { InAppChannel, OsChannel } from './alerts/channels'
+import { AlertEngine } from './alerts/engine'
+import { BybitFeed, type MarketFeed } from './alerts/feed'
+import { AlertStore } from './alerts/store'
+import { parseAlertInput, parseLine } from './alerts/validate'
 import { CandleService } from './candles'
 import type { ServerConfig } from './config'
 import { CandleStore, KvStore, openDb, type Db } from './db'
@@ -11,6 +17,10 @@ export interface AppDeps {
   db?: Db
   rest?: BybitRest
   logger?: boolean
+  /** Live data for alerts; default = Bybit public WebSocket */
+  feed?: MarketFeed
+  /** Extra alert channels; default = OS notification. The in-app channel is always added. */
+  channels?: AlertChannel[]
 }
 
 export interface App {
@@ -20,6 +30,9 @@ export interface App {
   candles: CandleService
   market: MarketService
   kv: KvStore
+  alerts: AlertEngine
+  /** Push an event to every connected web client */
+  broadcast(e: ServerEvent): void
 }
 
 const SYMBOL_RE = /^[A-Za-z0-9_.-]{1,40}$/
@@ -77,6 +90,72 @@ export function buildApp(deps: AppDeps): App {
 
   fastify.get('/api/health', async () => ({ ok: true, time: Date.now() }))
 
+  // ---------- events (server → web) ----------
+  const clients = new Set<{ send(data: string): void; readyState: number }>()
+  const broadcast = (e: ServerEvent) => {
+    const data = JSON.stringify(e)
+    for (const c of clients) {
+      if (c.readyState === 1) c.send(data)
+    }
+  }
+  void fastify.register(async (f) => {
+    await f.register(websocket)
+    f.get('/events', { websocket: true }, (socket) => {
+      clients.add(socket)
+      socket.send(JSON.stringify({ type: 'hello', time: Date.now() } satisfies ServerEvent))
+      socket.on('close', () => clients.delete(socket))
+      socket.on('error', () => clients.delete(socket))
+    })
+  })
+
+  // ---------- alerts ----------
+  const alertStore = new AlertStore(db)
+  const alerts: AlertEngine = new AlertEngine({
+    store: alertStore,
+    feed: deps.feed ?? new BybitFeed(config.bybit.wsHost),
+    loadCandles: async (q) => (await candles.get(q)).candles,
+    channels: [new InAppChannel(broadcast, (id) => alerts.list().find((a) => a.id === id)), ...(deps.channels ?? [new OsChannel()])],
+    onChange: () => broadcast({ type: 'alerts-changed' }),
+    log: (m) => fastify.log.warn(m),
+  })
+
+  fastify.get('/api/alerts', async () => ({ alerts: alerts.list() }))
+
+  fastify.post('/api/alerts', async (req) => ({ alert: alerts.create(parseAlertInput(req.body, Date.now())) }))
+
+  fastify.patch('/api/alerts/:id', async (req) => {
+    const { id } = req.params as { id: string }
+    const status = (req.body as { status?: unknown } | undefined)?.status
+    if (status !== 'active' && status !== 'paused') throw bad('status must be active or paused')
+    const alert = alerts.setStatus(id, status)
+    if (!alert) throw notFound('alert not found')
+    return { alert }
+  })
+
+  fastify.delete('/api/alerts/:id', async (req) => {
+    const { id } = req.params as { id: string }
+    if (!alerts.remove(id)) throw notFound('alert not found')
+    return { ok: true }
+  })
+
+  fastify.get('/api/alerts/history', async (req) => {
+    const q = req.query as Record<string, unknown>
+    return { history: alertStore.history(parseInt_(q.limit, 'limit', 1, 1000, 200)) }
+  })
+
+  fastify.delete('/api/alerts/history', async () => {
+    alertStore.clearHistory()
+    broadcast({ type: 'alerts-changed' })
+    return { ok: true }
+  })
+
+  /** The web app reports the current lines of a symbol so line alerts follow their drawing. */
+  fastify.post('/api/alerts/sync-lines', async (req) => {
+    const body = (req.body ?? {}) as Record<string, unknown>
+    const lines = Array.isArray(body.lines) ? body.lines.map(parseLine) : []
+    return { updated: alerts.syncLines(parseCategory(body.category), parseSymbol(body.symbol), lines) }
+  })
+
   // ---------- Bybit proxy + cache ----------
   fastify.get('/api/bybit/symbols', async (req) => {
     const q = req.query as Record<string, unknown>
@@ -126,5 +205,5 @@ export function buildApp(deps: AppDeps): App {
     return { ok: true, deleted: kv.delete(key) }
   })
 
-  return { fastify, db, rest, candles, market, kv }
+  return { fastify, db, rest, candles, market, kv, alerts, broadcast }
 }

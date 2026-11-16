@@ -5,6 +5,7 @@ import { adapter } from '../api/adapter'
 import { createChartEngine, drawingHasText, type ChartEngine, type DrawingOptions } from '../chart'
 import { CellController, type CellStatus } from '../lib/cellController'
 import { formatPct, formatPrice, signClass } from '../lib/format'
+import { shapeToLine, useAlerts } from '../state/alerts'
 import { useDrawings } from '../state/drawings'
 import { useLayout } from '../state/layout'
 import { useMarket } from '../state/market'
@@ -204,6 +205,10 @@ export function ChartCell({ index }: { index: number }) {
             shape={selected}
             onPatch={(patch) => engineRef.current?.updateDrawing(selected.id, patch)}
             onDelete={() => engineRef.current?.removeDrawing(selected.id)}
+            onAlert={() => {
+              const line = shapeToLine(selected)
+              if (line) useAlerts.getState().openDraft({ type: 'line', category: cell.category, symbol: cell.symbol, condition: 'cross', trigger: 'once', line })
+            }}
           />
         )}
         {(status.loading || status.error || status.empty) && (

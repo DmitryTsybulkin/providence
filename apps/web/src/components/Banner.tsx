@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { useAlerts } from '../state/alerts'
 import { useBoot } from '../state/boot'
 import { useMarket } from '../state/market'
 
@@ -8,8 +9,11 @@ export function Banner() {
   const rest = useMarket((s) => s.rest)
   const bootDown = useBoot((s) => s.serverDown && !s.hydrated)
 
+  const eventsUp = useAlerts((s) => s.connected)
+  const hydrated = useBoot((s) => s.hydrated)
+
   let message: string | null = null
-  if (bootDown || (rest && !rest.serverOk)) message = t('banner.serverDown')
+  if (bootDown || (rest && !rest.serverOk) || (hydrated && !eventsUp)) message = t('banner.serverDown')
   else if (rest?.stale) message = t('banner.bybitDown')
   if (!message) return null
   return (
