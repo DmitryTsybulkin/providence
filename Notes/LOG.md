@@ -343,4 +343,5 @@ https://www.tradingview.com/support/solutions/43000521824-pivot-points-standard/
 - macOS notifications cannot work from a container (no access to Notification Center); the OS channel just logs a
   warning there. Documented in the README.
 - Verified: production server serving the app, and the exact `pnpm deploy` bundle the image runs, on macOS.
-  **The Docker image itself has not been built yet** — the Docker daemon (OrbStack) was not running.
+  Docker image then built and run on OrbStack (arm64, 297 MB): app and API served, data persisted across a container
+  restart, health check healthy, runs as `node`, browser loads the app with live data.
