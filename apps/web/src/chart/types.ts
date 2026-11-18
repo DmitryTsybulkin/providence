@@ -23,7 +23,7 @@ export interface SetDataOptions {
 export interface IndicatorSeries {
   id: string
   name: string
-  params: number[]
+  params: (number | string)[]
   /** Value column names, e.g. ["ma1", "ma2"] */
   keys: string[]
   /** One row per candle: [time, ...values]; `null` where the indicator has no value */

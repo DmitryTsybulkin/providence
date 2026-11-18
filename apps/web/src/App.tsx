@@ -35,8 +35,8 @@ export function App() {
       <Banner />
       {ready ? (
         <main className="workspace">
-          <AssetList />
           <ChartGrid />
+          <AssetList />
           {alertsOpen && <AlertsPanel />}
         </main>
       ) : (

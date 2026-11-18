@@ -29,11 +29,25 @@ export interface IndicatorTemplate {
   /** 'price' = uses the symbol's price precision; 'normal' = uses `precision` */
   series: 'normal' | 'price' | 'volume'
   precision?: number
-  calcParams: number[]
+  calcParams: (number | string)[]
   figures: FigureDef[]
   minValue?: number
   maxValue?: number
-  calc(dataList: BarData[], indicator: { calcParams: number[] }): IndicatorRow[]
+  calc(dataList: BarData[], indicator: { calcParams: any[] }): IndicatorRow[]
+  /** Custom canvas drawing (KLineChart `IndicatorDrawParams`); return true to skip the default figures. */
+  draw?: (params: IndicatorDrawParams) => boolean
+}
+
+/** Structural subset of KLineChart 9's IndicatorDrawParams. */
+export interface IndicatorDrawParams {
+  ctx: CanvasRenderingContext2D
+  kLineDataList: BarData[]
+  indicator: { calcParams: any[]; precision: number; result: IndicatorRow[]; visible: boolean }
+  visibleRange: { from: number; to: number }
+  bounding: { left: number; top: number; width: number; height: number }
+  barSpace: { bar: number; halfBar: number }
+  xAxis: { convertToPixel(value: number): number }
+  yAxis: { convertToPixel(value: number): number }
 }
 
 export function toCandles(dataList: BarData[]): Candle[] {

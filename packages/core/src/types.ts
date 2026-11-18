@@ -83,13 +83,25 @@ export interface DataAdapter {
 export interface NumberParam {
   type: 'number'
   label: string
+  /** Show the value in the indicator's caption; default true */
+  inCaption?: boolean
   default: number
   min?: number
   max?: number
   step?: number
 }
+export interface SelectParam {
+  type: 'select'
+  label: string
+  /** Show the value in the indicator's caption; default true */
+  inCaption?: boolean
+  /** Option value */
+  default: string
+  options: { value: string; label: string }[]
+}
+export type ParamDef = NumberParam | SelectParam
 /** Ordered map of parameter name → definition. Order defines `calcParams` order. */
-export type ParamSchema = Record<string, NumberParam>
+export type ParamSchema = Record<string, ParamDef>
 export type ParamValues = Record<string, number | string>
 
 export interface IndicatorDef {

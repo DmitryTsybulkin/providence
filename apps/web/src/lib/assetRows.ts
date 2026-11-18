@@ -30,6 +30,8 @@ export function buildAssetRows(p: RowsInput): AssetRow[] {
   const { column, dir } = p.sort
   const sign = dir === 'asc' ? 1 : -1
   rows.sort((a, b) => {
+    // Favourites always stay on top; the chosen sort applies within each group.
+    if (a.favourite !== b.favourite) return a.favourite ? -1 : 1
     if (column === 'symbol') return sign * a.info.symbol.localeCompare(b.info.symbol)
     const av = a.ticker?.[column]
     const bv = b.ticker?.[column]

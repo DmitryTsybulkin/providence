@@ -14,10 +14,16 @@ export interface SortState {
 export const DEFAULT_FAVOURITES: SymbolKey[] = ['linear:BTCUSDT', 'linear:ETHUSDT']
 export const TICKER_REFRESH_MS = 5_000
 
+/** Columns the user can switch on; the rest are always shown. */
+export const OPTIONAL_COLUMNS = ['turnover24h', 'fundingRate'] as const
+export type OptionalColumn = (typeof OPTIONAL_COLUMNS)[number]
+
 interface ListPrefs {
   category: Category
   sort: SortState
   favOnly: boolean
+  /** Optional columns that are shown; none by default */
+  columns: OptionalColumn[]
 }
 
 interface MarketState extends ListPrefs {
@@ -34,6 +40,7 @@ interface MarketState extends ListPrefs {
   setSearch(s: string): void
   toggleSort(column: SortColumn): void
   setFavOnly(v: boolean): void
+  toggleColumn(c: OptionalColumn): void
   toggleFavourite(key: SymbolKey): void
   refreshSymbols(category: Category): Promise<void>
   refreshTickers(): Promise<void>
@@ -45,13 +52,14 @@ const prefsSaver = createSaver<ListPrefs>('assetList')
 
 export const useMarket = create<MarketState>((set, get) => {
   const savePrefs = () => {
-    const { category, sort, favOnly } = get()
-    prefsSaver.save({ category, sort, favOnly })
+    const { category, sort, favOnly, columns } = get()
+    prefsSaver.save({ category, sort, favOnly, columns })
   }
   return {
     category: 'linear',
-    sort: { column: 'turnover24h', dir: 'desc' },
+    sort: { column: 'volume24h', dir: 'desc' },
     favOnly: false,
+    columns: [],
     symbols: { linear: [], spot: [] },
     symbolIndex: {},
     tickers: {},
@@ -75,6 +83,14 @@ export const useMarket = create<MarketState>((set, get) => {
     },
     setFavOnly(favOnly) {
       set({ favOnly })
+      savePrefs()
+    },
+    toggleColumn(column) {
+      const cur = get().columns
+      const columns = cur.includes(column) ? cur.filter((c) => c !== column) : [...cur, column]
+      // Hiding the sorted column falls back to the default sort.
+      const sort = !columns.includes(column) && get().sort.column === column ? { column: 'volume24h' as const, dir: 'desc' as const } : get().sort
+      set({ columns, sort })
       savePrefs()
     },
     toggleFavourite(key) {
@@ -119,6 +135,9 @@ export const useMarket = create<MarketState>((set, get) => {
         ...(prefs?.category ? { category: prefs.category } : {}),
         ...(prefs?.sort ? { sort: prefs.sort } : {}),
         ...(prefs?.favOnly !== undefined ? { favOnly: prefs.favOnly } : {}),
+        ...(Array.isArray(prefs?.columns)
+          ? { columns: prefs.columns.filter((c): c is OptionalColumn => (OPTIONAL_COLUMNS as readonly string[]).includes(c)) }
+          : {}),
         ...(favourites ? { favourites } : {}),
       })
       favSaver.enable()

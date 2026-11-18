@@ -12,6 +12,7 @@ export const en = {
   assets: {
     title: 'Markets',
     search: 'Search symbol',
+    columns: 'Columns',
     favOnly: 'Favourites only',
     addFav: 'Add to favourites',
     removeFav: 'Remove from favourites',
@@ -39,8 +40,10 @@ export const en = {
     apply: 'Apply',
     defaults: 'Defaults',
     zeroHint: 'Set a length to 0 to turn that line off.',
-    name: { bb: 'Bollinger Bands', volume: 'Volume', stoch: 'Stochastic', sar: 'Parabolic SAR' },
+    name: { pivots: 'Pivot Points Standard', bb: 'Bollinger Bands', volume: 'Volume', stoch: 'Stochastic', sar: 'Parabolic SAR' },
+    option: { traditional: 'Traditional', fibonacci: 'Fibonacci', woodie: 'Woodie', classic: 'Classic', dm: 'DM', camarilla: 'Camarilla', auto: 'Auto', daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', quarterly: 'Quarterly', yearly: 'Yearly', both: 'Labels and prices', labels: 'Labels', prices: 'Prices', none: 'None' },
     param: {
+      type: 'Type', anchor: 'Pivots timeframe', back: 'Number of pivots back', labels: 'Labels', width: 'Line width',
       length: 'Length', length1: 'Length 1', length2: 'Length 2', length3: 'Length 3', mult: 'Multiplier',
       ma: 'MA length', fast: 'Fast', slow: 'Slow', signal: 'Signal', smoothK: '%K smoothing', smoothD: '%D smoothing',
       start: 'Start (%)', step: 'Step (%)', max: 'Max (%)',

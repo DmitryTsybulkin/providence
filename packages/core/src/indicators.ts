@@ -218,12 +218,20 @@ export function computeAlertIndicator(id: string, length: number, candles: Candl
 
 // ---------- Parameters ----------
 
-/** Resolve user values against a schema: missing/invalid → default, clamped to [min, max]. Order follows the schema. */
-export function resolveParams(schema: ParamSchema, values: ParamValues | undefined): Record<string, number> {
-  const out: Record<string, number> = {}
+/**
+ * Resolve user values against a schema: missing/invalid → default; numbers clamped to [min, max]; select values
+ * must be one of the options. Order follows the schema.
+ */
+export function resolveParams(schema: ParamSchema, values: ParamValues | undefined): Record<string, number | string> {
+  const out: Record<string, number | string> = {}
   for (const [key, def] of Object.entries(schema)) {
-    let v = Number(values?.[key])
-    if (values?.[key] === undefined || values?.[key] === '' || !Number.isFinite(v)) v = def.default
+    const raw = values?.[key]
+    if (def.type === 'select') {
+      out[key] = typeof raw === 'string' && def.options.some((o) => o.value === raw) ? raw : def.default
+      continue
+    }
+    let v = Number(raw)
+    if (raw === undefined || raw === '' || !Number.isFinite(v)) v = def.default
     if (def.min !== undefined) v = Math.max(def.min, v)
     if (def.max !== undefined) v = Math.min(def.max, v)
     out[key] = v
@@ -232,6 +240,6 @@ export function resolveParams(schema: ParamSchema, values: ParamValues | undefin
 }
 
 /** Resolved parameters as an ordered list (the chart library's `calcParams`). */
-export function paramList(schema: ParamSchema, values: ParamValues | undefined): number[] {
+export function paramList(schema: ParamSchema, values: ParamValues | undefined): (number | string)[] {
   return Object.values(resolveParams(schema, values))
 }

@@ -14,7 +14,7 @@ export function candlesToCsv(candles: Candle[]): string {
 export interface LegacyExport {
   meta: { app: 'providence'; version: 1; source: string; symbol: string; category: Category; exportedAt: string }
   chart: { type: 'Candles'; tf: Timeframe; data: [number, number, number, number, number, number][] }
-  indicators: { name: string; params: number[]; keys?: string[]; data: (number | null)[][] }[]
+  indicators: { name: string; params: (number | string)[]; keys?: string[]; data: (number | null)[][] }[]
 }
 
 export interface ExportInput {

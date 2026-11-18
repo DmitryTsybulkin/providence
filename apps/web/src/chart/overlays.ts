@@ -8,8 +8,8 @@
  */
 import { registerOverlay, type OverlayTemplate } from 'klinecharts'
 import {
-  formatDuration, positionStats, priceRangeStats,
-  type DrawingShape, type DrawingTool, type LineKind,
+  formatDuration, positionOutcome, positionStats, priceRangeStats,
+  type DrawingShape, type DrawingTool, type LineKind, type OhlcBar, type PositionSide,
 } from '@providence/core'
 import { COLORS } from './theme'
 
@@ -22,8 +22,21 @@ const LOSS = 'rgba(246,70,93,0.18)'
 const LABEL_TEXT = '#ffffff'
 const FONT = '-apple-system, BlinkMacSystemFont, Inter, Segoe UI, sans-serif'
 
-/** Bar interval (ms) of the chart an overlay lives on; maintained by the engine. Used by dateRange. */
-export const overlayInterval = new Map<string, () => number>()
+/** Per-overlay access to its chart: bar interval (dateRange) and loaded candles (position outcome). Set by the engine. */
+export interface OverlayContext {
+  interval(): number
+  bars(): readonly OhlcBar[]
+}
+export const overlayContext = new Map<string, OverlayContext>()
+
+/** Distance of the default stop from the entry, in pixels at the moment the position is placed. */
+export const POSITION_STOP_PX = 40
+/** extendData marker of the current position format: points = [entry, target (+ end time), stop]. */
+export const POSITION_FORMAT = 2
+
+export function positionSide(name: string): PositionSide | null {
+  return name === 'longPosition' ? 'long' : name === 'shortPosition' ? 'short' : null
+}
 
 interface Pt {
   x: number
@@ -67,37 +80,67 @@ const lineStyles = (styles: unknown, fallback: string) => {
   return { style: line?.style ?? 'solid', size: line?.size ?? 1, color: line?.color ?? fallback, dashedValue: [4, 4] }
 }
 
-/** Long/short position: points = [entry, stop, take]. Until the take is placed it is previewed at 2R. */
+/**
+ * Long/short position. Placed with two clicks: the entry, then the target price and the end of the forecast.
+ * The stop is a third point the engine adds when drawing ends, a fixed distance from the entry (it does not follow
+ * the target); afterwards every level can be dragged on its own. Points = [entry, target, stop].
+ */
 function positionTemplate(name: 'longPosition' | 'shortPosition'): OverlayTemplate {
+  const side: PositionSide = name === 'longPosition' ? 'long' : 'short'
+  const dir = side === 'long' ? 1 : -1
   return {
     name,
-    totalStep: 4,
+    totalStep: 3,
     needDefaultPointFigure: true,
     needDefaultXAxisFigure: false,
     needDefaultYAxisFigure: true,
-    createPointFigures: ({ overlay, coordinates, precision }) => {
+    createPointFigures: ({ overlay, coordinates, precision, barSpace, xAxis, yAxis }) => {
       const pts = overlay.points
       if (coordinates.length < 2 || pts[0]?.value === undefined || pts[1]?.value === undefined) return []
-      const [e, s] = coordinates
+      const [e, tk] = coordinates
       const entry = pts[0].value
-      const stop = pts[1].value
-      const placed = coordinates.length > 2 && pts[2]?.value !== undefined
-      const take = placed ? (pts[2].value as number) : entry + (entry - stop) * 2
-      const takeY = placed ? coordinates[2].y : e.y + (e.y - s.y) * 2
-      const x1 = Math.min(e.x, s.x, placed ? coordinates[2].x : e.x)
-      const x2 = Math.max(e.x, s.x, placed ? coordinates[2].x : e.x, x1 + 90)
-      const stats = positionStats(entry, stop, take)
+      const take = pts[1].value
+      const placedStop = coordinates.length > 2 && pts[2]?.value !== undefined
+      // Long: stop below the entry (larger y). Short: above.
+      const stopY = placedStop ? coordinates[2].y : e.y + dir * POSITION_STOP_PX
+      const stop = placedStop ? (pts[2].value as number) : (yAxis?.convertFromPixel(stopY) ?? entry)
+      const x1 = Math.min(e.x, tk.x)
+      // At least one bar wide, so a 1-bar forecast is still visible.
+      const x2 = Math.max(e.x, tk.x, x1 + barSpace.bar)
+      const stats = positionStats(entry, stop, take, side)
       const p = precision.price
       const mid = (x1 + x2) / 2
-      const above = (y: number, ref: number): CanvasTextBaseline => (y < ref ? 'bottom' : 'top')
-      return [
-        rect({ x: x1, y: e.y }, { x: x2, y: takeY }, PROFIT),
-        rect({ x: x1, y: e.y }, { x: x2, y: s.y }, LOSS),
+      const edge = (y: number): CanvasTextBaseline => (y < e.y ? 'bottom' : 'top')
+      const figures: unknown[] = [
+        rect({ x: x1, y: e.y }, { x: x2, y: tk.y }, PROFIT),
+        rect({ x: x1, y: e.y }, { x: x2, y: stopY }, LOSS),
         { type: 'line', attrs: { coordinates: [{ x: x1, y: e.y }, { x: x2, y: e.y }] }, styles: { style: 'solid', size: 1, color: COLORS.text } },
-        label(`${take.toFixed(p)}  (${signed(stats.takePct, 2)}%)`, mid, takeY, COLORS.up, 'center', above(takeY, e.y)),
-        label(`${stop.toFixed(p)}  (${signed(stats.stopPct, 2)}%)`, mid, s.y, COLORS.down, 'center', above(s.y, e.y)),
-        label(`${entry.toFixed(p)}  R:R ${stats.rr === null ? '—' : stats.rr.toFixed(2)}`, mid, e.y, '#3a4350'),
       ]
+
+      // Dashed line from the entry to where the price first reached the target or the stop (or to the last bar
+      // inside the forecast window). Only drawn when there are candles after the entry.
+      const bars = overlayContext.get(overlay.id)?.bars() ?? []
+      if (xAxis && yAxis && bars.length) {
+        const i0 = Math.round(xAxis.convertFromPixel(e.x))
+        const i1 = Math.round(xAxis.convertFromPixel(x2))
+        const outcome = positionOutcome(bars, i0, i1, side, stop, take)
+        if (outcome) {
+          const color = outcome.kind === 'target' ? COLORS.up : outcome.kind === 'stop' ? COLORS.down : COLORS.text
+          figures.push({
+            type: 'line',
+            attrs: { coordinates: [{ x: e.x, y: e.y }, { x: xAxis.convertToPixel(outcome.index), y: yAxis.convertToPixel(outcome.price) }] },
+            styles: { style: 'dashed', size: 1, color, dashedValue: [4, 3] },
+            ignoreEvent: true,
+          })
+        }
+      }
+
+      figures.push(
+        label(`${take.toFixed(p)}  (${signed(stats.takePct, 2)}%)`, mid, tk.y, COLORS.up, 'center', edge(tk.y)),
+        label(`${stop.toFixed(p)}  (${signed(stats.stopPct, 2)}%)`, mid, stopY, COLORS.down, 'center', edge(stopY)),
+        label(`${entry.toFixed(p)}  R:R ${stats.rr === null ? '—' : stats.rr.toFixed(2)}`, mid, e.y, '#3a4350'),
+      )
+      return figures as ReturnType<NonNullable<OverlayTemplate['createPointFigures']>>
     },
   }
 }
@@ -145,7 +188,7 @@ const dateRange: OverlayTemplate = {
     const i1 = xAxis?.convertFromPixel(a.x) ?? 0
     const i2 = xAxis?.convertFromPixel(b.x) ?? 0
     const bars = Math.round(i2 - i1)
-    const interval = overlayInterval.get(overlay.id)?.() ?? 0
+    const interval = overlayContext.get(overlay.id)?.interval() ?? 0
     const y1 = Math.min(a.y, b.y)
     const y2 = Math.max(a.y, b.y, y1 + 40)
     const mid = (y1 + y2) / 2

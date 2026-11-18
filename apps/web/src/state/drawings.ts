@@ -40,6 +40,18 @@ const saverFor = (symbolKey: string): Saver => {
   return saver
 }
 
+/**
+ * Positions saved before the 2026-11-18 rework stored points as [entry, stop, take]; the current format is
+ * [entry, take (+ end time), stop at the entry's time], marked with `extendData.v = 2`.
+ */
+export function migrateShape(s: DrawingShape): DrawingShape {
+  const isPosition = s.name === 'longPosition' || s.name === 'shortPosition'
+  const v = (s.extendData as { v?: number } | undefined)?.v
+  if (!isPosition || v === 2 || s.points.length !== 3) return s
+  const [entry, stop, take] = s.points
+  return { ...s, points: [entry, take, { timestamp: entry.timestamp, value: stop.value }], extendData: { v: 2 } }
+}
+
 export function sanitizeShapes(value: unknown): DrawingShape[] {
   if (!Array.isArray(value)) return []
   return value.filter(
@@ -49,7 +61,7 @@ export function sanitizeShapes(value: unknown): DrawingShape[] {
         const q = p as { timestamp?: unknown; value?: unknown }
         return !!q && Number.isFinite(q.timestamp) && Number.isFinite(q.value)
       }),
-  )
+  ).map(migrateShape)
 }
 
 export const useDrawings = create<DrawingsState>((set, get) => ({

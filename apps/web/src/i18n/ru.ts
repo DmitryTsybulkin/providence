@@ -14,6 +14,7 @@ export const ru: Strings = {
   assets: {
     title: 'Рынки',
     search: 'Поиск символа',
+    columns: 'Колонки',
     favOnly: 'Только избранное',
     addFav: 'Добавить в избранное',
     removeFav: 'Убрать из избранного',
@@ -41,8 +42,10 @@ export const ru: Strings = {
     apply: 'Применить',
     defaults: 'По умолчанию',
     zeroHint: 'Длина 0 отключает линию.',
-    name: { bb: 'Полосы Боллинджера', volume: 'Объём', stoch: 'Стохастик', sar: 'Параболик SAR' },
+    name: { pivots: 'Пивоты (стандартные)', bb: 'Полосы Боллинджера', volume: 'Объём', stoch: 'Стохастик', sar: 'Параболик SAR' },
+    option: { traditional: 'Традиционные', fibonacci: 'Фибоначчи', woodie: 'Вуди', classic: 'Классические', dm: 'DM', camarilla: 'Камарилла', auto: 'Авто', daily: 'День', weekly: 'Неделя', monthly: 'Месяц', quarterly: 'Квартал', yearly: 'Год', both: 'Названия и цены', labels: 'Названия', prices: 'Цены', none: 'Нет' },
     param: {
+      type: 'Тип', anchor: 'Таймфрейм пивотов', back: 'Сколько периодов показывать', labels: 'Подписи', width: 'Толщина линии',
       length: 'Длина', length1: 'Длина 1', length2: 'Длина 2', length3: 'Длина 3', mult: 'Множитель',
       ma: 'Длина MA', fast: 'Быстрая', slow: 'Медленная', signal: 'Сигнальная', smoothK: 'Сглаживание %K', smoothD: 'Сглаживание %D',
       start: 'Старт (%)', step: 'Шаг (%)', max: 'Макс (%)',

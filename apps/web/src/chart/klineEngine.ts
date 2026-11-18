@@ -6,7 +6,7 @@ import type { Candle, DrawingShape, IndicatorState } from '@providence/core'
 import { indexToTime, inferInterval, inRange, timeToIndex } from './anchor'
 import { ensureIndicatorsRegistered, getIndicatorDef, toKLineSpec } from './indicators'
 import { ensureLocales, localeName } from './locale'
-import { ensureOverlaysRegistered, overlayInterval } from './overlays'
+import { ensureOverlaysRegistered, overlayContext, POSITION_FORMAT, POSITION_STOP_PX, positionSide, type OverlayContext } from './overlays'
 import { chartStyles, COLORS } from './theme'
 import type {
   ChartEngine, ChartEngineOptions, ChartLocale, DrawingEvent, DrawingOptions, DrawingPatch, IndicatorSeries, PageResult,
@@ -34,7 +34,7 @@ export class KLineEngine implements ChartEngine {
   private pricePrecision = 2
   private indicators: IndicatorState[] = []
   private indicatorSignature = ''
-  private appliedIndicators: { id: string; paneId: string; name: string; calcParams: number[] }[] = []
+  private appliedIndicators: { id: string; paneId: string; name: string; calcParams: (number | string)[] }[] = []
   /** Canonical drawings in data coordinates (timestamp, value), keyed by id. */
   private shapes = new Map<string, DrawingShape>()
   private progressId: string | null = null
@@ -43,6 +43,10 @@ export class KLineEngine implements ChartEngine {
   private drawingOptions: DrawingOptions = { magnet: false, lockAll: false, hideAll: false }
   private readonly drawingListeners = new Set<(e: DrawingEvent) => void>()
   private rangeSignature = ''
+  private readonly overlayCtx: OverlayContext = {
+    interval: () => this.interval(),
+    bars: () => this.chart.getDataList(),
+  }
 
   constructor(
     protected readonly container: HTMLElement,
@@ -114,7 +118,10 @@ export class KLineEngine implements ChartEngine {
     return this.appliedIndicators.flatMap((a) => {
       const indicator = this.chart.getIndicatorByPaneId(a.paneId, a.name) as Indicator | null
       if (!indicator || !Array.isArray(indicator.result)) return []
-      const keys = indicator.figures.map((f) => f.key)
+      // Indicators that draw themselves (Pivots) have no figures; take the value columns from the results.
+      const keys = indicator.figures.length
+        ? indicator.figures.map((f) => f.key)
+        : [...new Set(indicator.result.flatMap((r) => Object.keys(r ?? {})))].filter((k) => k !== 'start' && k !== 'end')
       const data = candles.map((c, i) => {
         const row = (indicator.result[i] ?? {}) as Record<string, number | undefined>
         return [c.timestamp, ...keys.map((k) => (typeof row[k] === 'number' && Number.isFinite(row[k]) ? (row[k] as number) : null))]
@@ -200,8 +207,8 @@ export class KLineEngine implements ChartEngine {
 
   dispose(): void {
     this.generation++
-    for (const id of this.shapes.keys()) overlayInterval.delete(id)
-    if (this.progressId) overlayInterval.delete(this.progressId)
+    for (const id of this.shapes.keys()) overlayContext.delete(id)
+    if (this.progressId) overlayContext.delete(this.progressId)
     this.drawingListeners.clear()
     dispose(this.container)
   }
@@ -219,7 +226,7 @@ export class KLineEngine implements ChartEngine {
     })
     if (typeof id !== 'string') return false
     this.progressId = id
-    overlayInterval.set(id, () => this.interval())
+    overlayContext.set(id, this.overlayCtx)
     return true
   }
 
@@ -227,7 +234,7 @@ export class KLineEngine implements ChartEngine {
     if (!this.progressId) return
     const id = this.progressId
     this.progressId = null
-    overlayInterval.delete(id)
+    overlayContext.delete(id)
     this.chart.removeOverlay(id)
     this.emit({ type: 'tool-end' })
   }
@@ -236,14 +243,14 @@ export class KLineEngine implements ChartEngine {
     this.cancelDrawing()
     for (const id of this.shapes.keys()) {
       this.chart.removeOverlay(id)
-      overlayInterval.delete(id)
+      overlayContext.delete(id)
     }
     this.shapes = new Map()
     const times = this.times()
     const interval = inferInterval(times)
     for (const shape of shapes) {
       this.shapes.set(shape.id, shape)
-      overlayInterval.set(shape.id, () => this.interval())
+      overlayContext.set(shape.id, this.overlayCtx)
       this.chart.createOverlay({
         name: shape.name,
         id: shape.id,
@@ -285,7 +292,7 @@ export class KLineEngine implements ChartEngine {
 
   removeDrawing(id: string): void {
     if (!this.shapes.delete(id)) return
-    overlayInterval.delete(id)
+    overlayContext.delete(id)
     this.chart.removeOverlay(id)
     this.emit({ type: 'change', shapes: this.getDrawings() })
     if (this.selectedId === id) {
@@ -375,6 +382,7 @@ export class KLineEngine implements ChartEngine {
     return {
       onDrawEnd: ({ overlay }) => {
         if (this.progressId === overlay.id) this.progressId = null
+        this.finishPosition(overlay)
         const shape = this.capture(overlay)
         this.selectedId = shape.id
         this.emit({ type: 'change', shapes: this.getDrawings() })
@@ -412,6 +420,25 @@ export class KLineEngine implements ChartEngine {
       // KLineChart deletes an overlay on right-click unless the handler returns true.
       onRightClick: () => true,
     }
+  }
+
+  /** A long/short position was placed with two clicks: add its stop a fixed distance from the entry. */
+  private finishPosition(overlay: Overlay): void {
+    const side = positionSide(overlay.name)
+    const [entry, target] = overlay.points
+    if (!side || overlay.points.length !== 2 || entry?.value === undefined || !target) return
+    const finder = { paneId: overlay.paneId }
+    const px = this.chart.convertToPixel({ ...entry }, finder) as Partial<{ x: number; y: number }>
+    if (px.y === undefined) return
+    // convertFromPixel takes and returns an array, even for one coordinate.
+    const converted = this.chart.convertFromPixel([{ x: px.x, y: px.y + (side === 'long' ? 1 : -1) * POSITION_STOP_PX }], finder)
+    const stopPoint = (Array.isArray(converted) ? converted[0] : converted) as Partial<Point> | undefined
+    if (stopPoint?.value === undefined) return
+    // The stop handle sits at the entry's time, at the left edge of the box.
+    const stop: Partial<Point> = { ...entry, value: stopPoint.value }
+    this.chart.overrideOverlay({ id: overlay.id, points: [entry, target, stop], extendData: { v: POSITION_FORMAT } })
+    overlay.points = [entry, target, stop]
+    overlay.extendData = { v: POSITION_FORMAT }
   }
 
   /** The loaded candle range changed → points outside it need new extrapolated indices. */

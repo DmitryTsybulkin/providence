@@ -167,6 +167,15 @@ function ParamsDialog(props: { def: IndicatorDef; values: ParamValues; onApply(p
         {Object.entries(def.params).map(([key, p], i) => (
           <label key={key} className="field">
             <span>{names.param(key, p.label)}</span>
+            {p.type === 'select' ? (
+              <select className="input" value={draft[key] ?? p.default} onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}>
+                {p.options.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {t(`indicators.option.${o.value}`, { defaultValue: o.label })}
+                  </option>
+                ))}
+              </select>
+            ) : (
             <input
               className="input"
               type="number"
@@ -178,9 +187,10 @@ function ParamsDialog(props: { def: IndicatorDef; values: ParamValues; onApply(p
               autoFocus={i === 0}
               onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
             />
+            )}
           </label>
         ))}
-        {Object.values(def.params).some((p) => p.min === 0) && <div className="muted small">{t('indicators.zeroHint')}</div>}
+        {Object.values(def.params).some((p) => p.type === 'number' && p.min === 0) && <div className="muted small">{t('indicators.zeroHint')}</div>}
         <button type="submit" hidden />
       </form>
     </Modal>

@@ -272,3 +272,44 @@ Corrected drawings.md §2 table:
   Added: README section "macOS notifications" with the one-time setup, `POST /api/alerts/test-notification`
   (sends through the OS channel only, no history entry) and a button for it in the Alerts panel.
 - After allowing notifications for Script Editor, the user confirmed that the test button shows a banner.
+
+## Improvements (2026-11-18)
+
+**Asset list**
+- Moved to the right of the charts. Favourites are always on top; the chosen sort applies inside each group.
+- Turnover and Funding are optional columns (off by default), switched in the "⋮" menu next to the search; the choice
+  is saved with the list preferences. Default sort is now Volume (Turnover is hidden by default); hiding the sorted
+  column falls back to it.
+
+**Long / short position (bug fix and rework)**
+- Bug: the second click set the *stop*, so dragging a short downwards showed a red, negative zone below; the take was
+  derived from the stop (2R), so moving one moved the other; and the % was always long-oriented.
+- Now: click 1 = entry, click 2 = target price and end of the forecast. When drawing ends the engine adds the stop as
+  a third point, `POSITION_STOP_PX` (40 px) from the entry — fixed, it no longer follows the target. All three points
+  are dragged independently; the stop handle sits at the entry's time (left edge).
+- % are from the position's point of view (`positionStats(entry, stop, take, side)`): a short's target below the
+  entry is positive, its stop above is negative. **Deviation from drawings.md §4**, whose `%stop` formula is the long
+  case only; for a short the sign is flipped.
+- No minimum width (was ~90 px ≈ 12 bars); a forecast is at least one bar wide.
+- Dashed line from the entry to the bar where the target or stop is first touched (green / red), or to the last bar
+  inside the window (grey) when neither is touched; nothing when there are no bars after the entry yet. If one bar
+  touches both levels the stop is assumed first. Logic: `positionOutcome` in core, unit-tested.
+- Saved positions in the old `[entry, stop, take]` order are converted on load (`extendData.v = 2` marks the new
+  `[entry, take, stop]` order).
+- KLineChart: `convertFromPixel` returns an array even for one coordinate.
+
+**Pivot Points Standard** (TradingView "Pivots"; formulas per
+https://www.tradingview.com/support/solutions/43000521824-pivot-points-standard/)
+- Types Traditional, Fibonacci, Woodie, Classic, DM, Camarilla; pivots timeframe Auto / Daily / Weekly / Monthly /
+  Quarterly / Yearly (Auto: ≤ 15m → daily, other intraday → weekly, 1d → monthly, 1w → yearly); number of pivots back;
+  labels (labels and prices / labels / prices / none); line width.
+- Maths in `packages/core/src/pivots.ts` (tested); the indicator draws one horizontal segment per level per period
+  with its own `draw`, so the levels do **not** stretch the price scale (with figures, R5/S5 squashed the candles).
+  The current period extends to its end, like TradingView.
+- Periods are UTC (weeks from Monday) and built from the chart's own candles. A period gets levels only when the whole
+  previous period is loaded.
+- Not ported from the Pine script: Biyearly/Triyearly/Quinquennially/Decennially, "use daily-based values" (crypto
+  trades 24/7, so intraday and EOD data agree), per-level colours and visibility, label position right, the
+  developing next-period pivots drawn before the period starts.
+- Indicator params gained a `select` type (`SelectParam`) and `inCaption: false` to keep display settings out of
+  the chip caption.

@@ -18,16 +18,26 @@ const base = { symbols, tickers, favourites: ['linear:ETHUSDT'], search: '', fav
 const names = (rows: ReturnType<typeof buildAssetRows>) => rows.map((r) => r.info.symbol)
 
 describe('buildAssetRows', () => {
+  const noFav = { ...base, favourites: [] }
   it('sorts by a ticker column; rows without a ticker go last in both directions', () => {
-    expect(names(buildAssetRows({ ...base, sort: { column: 'turnover24h', dir: 'desc' } }))).toEqual(
+    expect(names(buildAssetRows({ ...noFav, sort: { column: 'turnover24h', dir: 'desc' } }))).toEqual(
       ['BTCUSDT', 'ETHUSDT', '1000PEPEUSDT', 'NEWUSDT'],
     )
-    expect(names(buildAssetRows({ ...base, sort: { column: 'change24h', dir: 'asc' } }))).toEqual(
+    expect(names(buildAssetRows({ ...noFav, sort: { column: 'change24h', dir: 'asc' } }))).toEqual(
       ['ETHUSDT', 'BTCUSDT', '1000PEPEUSDT', 'NEWUSDT'],
     )
   })
   it('sorts by symbol', () => {
-    expect(names(buildAssetRows({ ...base, sort: { column: 'symbol', dir: 'asc' } }))[0]).toBe('1000PEPEUSDT')
+    expect(names(buildAssetRows({ ...noFav, sort: { column: 'symbol', dir: 'asc' } }))[0]).toBe('1000PEPEUSDT')
+  })
+  it('keeps favourites on top whatever the sort', () => {
+    const favs = { ...base, favourites: ['linear:ETHUSDT', 'linear:NEWUSDT'] }
+    expect(names(buildAssetRows({ ...favs, sort: { column: 'turnover24h', dir: 'desc' } }))).toEqual(
+      ['ETHUSDT', 'NEWUSDT', 'BTCUSDT', '1000PEPEUSDT'],
+    )
+    expect(names(buildAssetRows({ ...favs, sort: { column: 'symbol', dir: 'desc' } }))).toEqual(
+      ['NEWUSDT', 'ETHUSDT', 'BTCUSDT', '1000PEPEUSDT'],
+    )
   })
   it('searches by symbol or base coin, case-insensitive', () => {
     const sort = { column: 'symbol', dir: 'asc' } as const

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   atr, bollinger, candleOpenTime, closedCandles, conditionMet, decimalsOf, ema, formatDuration, isCandleClosed,
-  lineValueAt, macd, mergeCandles, parseSymbolKey, positionStats, priceRangeStats, rma, rsi, sma, stoch, symbolKey, vwap,
+  lineValueAt, macd, mergeCandles, parseSymbolKey, positionOutcome, positionStats, priceRangeStats, rma, rsi, sma, stoch, symbolKey, vwap,
   type Candle,
 } from './index'
 
@@ -154,11 +154,26 @@ describe('position maths', () => {
     expect(s.stopPct).toBe(-5)
     expect(s.takePct).toBe(15)
   })
-  it('short position', () => {
-    const s = positionStats(100, 104, 90)
+  it('short position: profit below the entry is positive, the stop above is negative', () => {
+    const s = positionStats(100, 104, 90, 'short')
     expect(s.rr).toBe(2.5)
-    expect(s.stopPct).toBe(4)
-    expect(s.takePct).toBe(-10)
+    expect(s.stopPct).toBe(-4)
+    expect(s.takePct).toBe(10)
+  })
+  it('finds which level is touched first after the entry bar', () => {
+    const bar = (high: number, low: number, close = (high + low) / 2) => ({ high, low, close })
+    const bars = [bar(101, 99), bar(102, 99), bar(116, 100), bar(120, 90)]
+    // long 100 → take 115 / stop 95: bar 2 reaches 116
+    expect(positionOutcome(bars, 0, 3, 'long', 95, 115)).toEqual({ kind: 'target', index: 2, price: 115 })
+    // short 100 → take 90 / stop 105: bar 2 reaches 116 ≥ stop
+    expect(positionOutcome(bars, 0, 3, 'short', 105, 90)).toEqual({ kind: 'stop', index: 2, price: 105 })
+    // nothing touched inside the window → last bar's close
+    expect(positionOutcome(bars, 0, 1, 'long', 95, 115)).toEqual({ kind: 'open', index: 1, price: 100.5 })
+    // one bar touching both → stop first
+    expect(positionOutcome(bars, 2, 3, 'long', 95, 119)).toEqual({ kind: 'stop', index: 3, price: 95 })
+    // no bar after the entry (forecast in the future)
+    expect(positionOutcome(bars, 3, 10, 'long', 95, 115)).toBeNull()
+    expect(positionOutcome(bars, 1, 1, 'long', 95, 115)).toBeNull()
   })
   it('zero risk gives no R:R', () => {
     expect(positionStats(100, 100, 110).rr).toBeNull()

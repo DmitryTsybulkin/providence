@@ -1,11 +1,12 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useMemo, useRef } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CATEGORIES } from '@providence/core'
 import { buildAssetRows } from '../lib/assetRows'
 import { formatCompact, formatPct, formatPrice, signClass } from '../lib/format'
 import { useLayout } from '../state/layout'
-import { useMarket, type SortColumn } from '../state/market'
+import { Popover } from '../components/Popover'
+import { OPTIONAL_COLUMNS, useMarket, type SortColumn } from '../state/market'
 
 const ROW_HEIGHT = 26
 
@@ -19,7 +20,9 @@ export function AssetList() {
   const favOnly = useMarket((s) => s.favOnly)
   const sort = useMarket((s) => s.sort)
   const loading = useMarket((s) => s.loading)
-  const { setCategory, setSearch, setFavOnly, toggleSort, toggleFavourite } = useMarket.getState()
+  const shown = useMarket((s) => s.columns)
+  const { setCategory, setSearch, setFavOnly, toggleSort, toggleFavourite, toggleColumn } = useMarket.getState()
+  const [colsOpen, setColsOpen] = useState(false)
 
   const activeCell = useLayout((s) => s.cells[s.active])
   const activeKey = `${activeCell.category}:${activeCell.symbol}`
@@ -37,12 +40,21 @@ export function AssetList() {
     overscan: 12,
   })
 
-  const columns: SortColumn[] = ['symbol', 'lastPrice', 'change24h', 'turnover24h', 'volume24h']
-  if (category === 'linear') columns.push('fundingRate')
-  const gridClass = `asset-grid ${category}`
+  const showTurnover = shown.includes('turnover24h')
+  const showFunding = category === 'linear' && shown.includes('fundingRate')
+  const columns: SortColumn[] = ['symbol', 'lastPrice', 'change24h']
+  if (showTurnover) columns.push('turnover24h')
+  columns.push('volume24h')
+  if (showFunding) columns.push('fundingRate')
+  const WIDTH: Record<SortColumn, string> = {
+    symbol: 'minmax(96px, 1.5fr)', lastPrice: '1.1fr', change24h: '58px', turnover24h: '62px', volume24h: '62px', fundingRate: '74px',
+  }
+  const gridStyle = { gridTemplateColumns: ['22px', ...columns.map((c) => WIDTH[c])].join(' ') }
+  const panelWidth = 330 + (showTurnover ? 68 : 0) + (showFunding ? 80 : 0)
+  const gridClass = 'asset-grid'
 
   return (
-    <section className="panel asset-list" aria-label={t('assets.title')}>
+    <section className="panel asset-list" style={{ width: panelWidth }} aria-label={t('assets.title')}>
       <div className="panel-head">
         <div className="tabs" role="tablist">
           {CATEGORIES.map((c) => (
@@ -70,8 +82,31 @@ export function AssetList() {
         >
           ★
         </button>
+        <div className="anchor">
+          <button className={colsOpen ? 'icon-btn on' : 'icon-btn'} title={t('assets.columns')} aria-haspopup="menu" onClick={() => setColsOpen(!colsOpen)}>
+            ⋮
+          </button>
+          {colsOpen && (
+            <Popover onClose={() => setColsOpen(false)} className="menu right">
+              <div className="menu-title">{t('assets.columns')}</div>
+              {OPTIONAL_COLUMNS.map((c) => (
+                <button
+                  key={c}
+                  className={shown.includes(c) ? 'menu-item checked' : 'menu-item'}
+                  role="menuitemcheckbox"
+                  aria-checked={shown.includes(c)}
+                  onClick={() => toggleColumn(c)}
+                >
+                  <span className="check">{shown.includes(c) ? '✓' : ''}</span>
+                  {t(`assets.col.${c}`)}
+                  {c === 'fundingRate' && <span className="muted small">&nbsp;({t('category.linear')})</span>}
+                </button>
+              ))}
+            </Popover>
+          )}
+        </div>
       </div>
-      <div className={`${gridClass} asset-header`} role="row">
+      <div className={`${gridClass} asset-header`} style={gridStyle} role="row">
         <span />
         {columns.map((col) => (
           <button
@@ -99,7 +134,7 @@ export function AssetList() {
                   role="row"
                   aria-selected={selected}
                   className={`${gridClass} asset-row${selected ? ' selected' : ''}`}
-                  style={{ transform: `translateY(${item.start}px)`, height: ROW_HEIGHT }}
+                  style={{ ...gridStyle, transform: `translateY(${item.start}px)`, height: ROW_HEIGHT }}
                   onClick={() => {
                     const l = useLayout.getState()
                     l.setSymbol(l.active, info.category, info.symbol)
@@ -119,9 +154,9 @@ export function AssetList() {
                   <span className="sym">{info.symbol}</span>
                   <span className="num">{ticker ? formatPrice(ticker.lastPrice, info.pricePrecision) : '—'}</span>
                   <span className={`num ${ticker ? signClass(ticker.change24h) : ''}`}>{ticker ? formatPct(ticker.change24h) : '—'}</span>
-                  <span className="num">{ticker ? formatCompact(ticker.turnover24h) : '—'}</span>
+                  {showTurnover && <span className="num">{ticker ? formatCompact(ticker.turnover24h) : '—'}</span>}
                   <span className="num">{ticker ? formatCompact(ticker.volume24h) : '—'}</span>
-                  {category === 'linear' && (
+                  {showFunding && (
                     <span className={`num ${ticker?.fundingRate !== undefined ? signClass(ticker.fundingRate) : ''}`}>
                       {ticker?.fundingRate !== undefined ? formatPct(ticker.fundingRate, 4) : '—'}
                     </span>

@@ -5,9 +5,11 @@
  * Private indicators never go into this repo.
  */
 import { atr, rsi, stoch, vwap, type IndicatorDef } from '@providence/core'
+import { pivotsDef } from './pivots'
 import { rows, toCandles, type IndicatorTemplate } from './template'
 
 export * from './template'
+export * from './pivots'
 
 const vwapTemplate: IndicatorTemplate = {
   name: 'PV_VWAP',
@@ -24,7 +26,7 @@ const atrTemplate: IndicatorTemplate = {
   series: 'price',
   calcParams: [14],
   figures: [{ key: 'atr', title: 'ATR: ', type: 'line' }],
-  calc: (dataList, { calcParams }) => rows(dataList.length, { atr: atr(toCandles(dataList), calcParams[0]) }),
+  calc: (dataList, { calcParams }) => rows(dataList.length, { atr: atr(toCandles(dataList), Number(calcParams[0])) }),
 }
 
 const rsiTemplate: IndicatorTemplate = {
@@ -59,6 +61,7 @@ const stochTemplate: IndicatorTemplate = {
 }
 
 export const customIndicators: IndicatorDef[] = [
+  pivotsDef,
   { id: 'vwap', label: 'VWAP', pane: 'overlay', params: {}, template: vwapTemplate },
   {
     id: 'rsi',

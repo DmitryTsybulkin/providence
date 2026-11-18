@@ -14,10 +14,10 @@ Everything below was exercised in the browser at http://localhost:5173 against l
 | Run | `pnpm dev` starts web (:5173) and server; the server listens on `127.0.0.1:4317` only |
 | Market data | `/api/bybit/symbols\|tickers\|candles` with caches (symbols 1 h, tickers 5 s, closed candles in SQLite); backoff on 429 / 10006; `/api/store/:key` |
 | Live data | Bybit public WebSocket from the browser: ping every 20 s, reconnect with backoff, resubscribe, gap refetch |
-| Asset list | 821 USDT perpetuals and 509 spot symbols; search, sort, favourites, 5 s refresh, virtualized; click selects the symbol |
+| Asset list | Right of the charts; USDT perpetuals and spot; search, sort, favourites on top, optional Turnover/Funding columns, 5 s refresh, virtualized; click selects the symbol |
 | Chart | KLineChart 9.8.12 behind `ChartEngine`; 7 timeframes; history paging in both directions (cap 50 000); go to date; live last candle |
-| Indicators | SMA, EMA, Bollinger, Parabolic SAR, VWAP (overlay); Volume, MACD, RSI, Stochastic, ATR, CCI, OBV (pane); params dialog, hide, remove, max 10 |
-| Drawings | 21 tools: 15 built-in overlays + custom long/short position (live R:R and %), price range, date range, text, arrow; style bar; Delete; undo; saved per symbol, shared across timeframes and cells |
+| Indicators | SMA, EMA, Bollinger, Parabolic SAR, VWAP, Pivot Points Standard (overlay); Volume, MACD, RSI, Stochastic, ATR, CCI, OBV (pane); params dialog, hide, remove, max 10 |
+| Drawings | 21 tools: 15 built-in overlays + custom long/short position (live R:R and %, fixed stop, outcome line), price range, date range, text, arrow; style bar; Delete; undo; saved per symbol, shared across timeframes and cells |
 | Layouts | 1 / 2 / 4 charts, each with its own symbol, timeframe and indicators; active cell receives asset-list clicks |
 | Alerts | Server-side engine: price cross/above/below, line cross from a drawn horizontal or trend line, indicator (RSI, EMA, SMA, ATR) on candle close; once / every time; expiry; panel with history; in-app toast |
 | Export | CSV, JSON (legacy format), PNG; exported JSON can be re-opened for viewing |

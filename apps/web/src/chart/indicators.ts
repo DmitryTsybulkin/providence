@@ -14,12 +14,12 @@ interface BuiltinSpec {
   /** KLineChart indicator name */
   name: string
   /** Map resolved params to calcParams. Default: schema order. */
-  calcParams?: (p: Record<string, number>) => number[]
+  calcParams?: (p: Record<string, number | string>) => (number | string)[]
   /** Extra decimals relative to the price precision; undefined = library default */
   precisionOffset?: number
 }
 
-const lengths = (p: Record<string, number>) => Object.values(p).filter((v) => v > 0)
+const lengths = (p: Record<string, number | string>) => Object.values(p).filter((v) => typeof v === 'number' && v > 0)
 const len = (label: string, def: number) => ({ type: 'number' as const, label, default: def, min: 0, max: 1000, step: 1 })
 
 const BUILTIN_DEFS: IndicatorDef[] = [
@@ -93,7 +93,7 @@ export function getIndicatorDef(id: string): IndicatorDef | undefined {
 
 export interface KLineIndicatorSpec {
   name: string
-  calcParams: number[]
+  calcParams: (number | string)[]
   precision?: number
 }
 
@@ -114,6 +114,12 @@ export function toKLineSpec(def: IndicatorDef, params: ParamValues, pricePrecisi
 
 /** Short legend text such as "EMA 9 21 50". */
 export function indicatorCaption(def: IndicatorDef, params: ParamValues): string {
-  const values = Object.values(resolveParams(def.params, params)).filter((v) => v > 0)
+  const resolved = resolveParams(def.params, params)
+  const values = Object.entries(resolved).flatMap(([key, v]) => {
+    const p = def.params[key]
+    if (p.inCaption === false) return []
+    if (p.type === 'select') return [p.options.find((o) => o.value === v)?.label ?? String(v)]
+    return typeof v === 'number' && v > 0 ? [String(v)] : []
+  })
   return values.length ? `${def.label} ${values.join(' ')}` : def.label
 }
