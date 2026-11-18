@@ -14,7 +14,7 @@
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint .",
     "test": "vitest run",
-    "start": "pnpm --filter @providence/server start"
+    "start": "PROVIDENCE_WEB_DIR=../web/dist pnpm --filter @providence/server start"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

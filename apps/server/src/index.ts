@@ -1,14 +1,14 @@
 import { buildApp } from './app'
-import { HOST, loadConfig } from './config'
+import { loadConfig } from './config'
 
 const config = loadConfig()
 const app = buildApp({ config, logger: true })
 
 app.fastify
-  .listen({ host: HOST, port: config.port })
+  .listen({ host: config.host, port: config.port })
   .then(() => {
     app.alerts.start()
-    app.fastify.log.info(`Providence server on http://${HOST}:${config.port} (db: ${config.dbPath})`)
+    app.fastify.log.info(`Providence server on http://${config.host}:${config.port} (db: ${config.dbPath}${config.webDir ? `, web: ${config.webDir}` : ''})`)
   })
   .catch((err) => {
     app.fastify.log.error(err)

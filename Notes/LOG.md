@@ -326,3 +326,21 @@ https://www.tradingview.com/support/solutions/43000521824-pivot-points-standard/
 - Fibonacci channel (custom overlay `fibonacciChannel`, Fibonacci group): clicks 1–2 = base trend line, click 3 =
   channel width; levels 0, 0.236, 0.382, 0.5, 0.618, 0.786, 1, 1.618, 2.618, 3.618, 4.236 as lines parallel to the
   base, labelled with level and price. The pinned 9.8.12 build has no built-in Fibonacci channel.
+
+## Docker and README (2026-11-18)
+
+- `Dockerfile` (multi-stage, node:22-bookworm-slim) + `docker-compose.yml` + `.dockerignore`. One container: the
+  server also serves the built web app (`@fastify/static`, `PROVIDENCE_WEB_DIR`), with an SPA fallback for non-API
+  paths. Data in the `/data` volume (`PROVIDENCE_DB_PATH`). Runs as the `node` user, with a health check.
+- **Deviation from the hard rule "server binds to 127.0.0.1 only"**: inside a container loopback is unreachable from
+  the host, so with `PROVIDENCE_IN_DOCKER=1` (set only by the Dockerfile) the server listens on `0.0.0.0` *inside the
+  container*, and the compose file / README publish the port on the host's `127.0.0.1` only. Outside Docker nothing
+  changed.
+- Server config gained env overrides `PROVIDENCE_PORT`, `PROVIDENCE_DB_PATH`, `PROVIDENCE_WEB_DIR`; `pnpm start`
+  now serves the built web app at http://localhost:4317 (one process, no Vite).
+- `apps/server/package.json` has `"files": ["dist"]`: `pnpm deploy` otherwise drops the git-ignored `dist/`.
+- `pnpm deploy` on pnpm 12 needs `--legacy` (no `inject-workspace-packages`).
+- macOS notifications cannot work from a container (no access to Notification Center); the OS channel just logs a
+  warning there. Documented in the README.
+- Verified: production server serving the app, and the exact `pnpm deploy` bundle the image runs, on macOS.
+  **The Docker image itself has not been built yet** — the Docker daemon (OrbStack) was not running.

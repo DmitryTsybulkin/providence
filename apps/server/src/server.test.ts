@@ -3,7 +3,7 @@ import type { Candle, SymbolInfo, Ticker } from '@providence/core'
 import type { BybitRest, KlineParams } from '@providence/adapter-bybit'
 import { buildApp } from './app'
 import { CandleService, planCandleFetch } from './candles'
-import { DEFAULT_CONFIG } from './config'
+import { DEFAULT_CONFIG, loadConfig, resolveHost } from './config'
 import { CandleStore, KvStore, openDb } from './db'
 import { TtlCache } from './market'
 
@@ -229,5 +229,19 @@ describe('HTTP routes', () => {
     expect((await app.fastify.inject({ method: 'PUT', url: '/api/store/bad%20key', payload: { value: 1 } })).statusCode).toBe(400)
     expect((await app.fastify.inject({ method: 'DELETE', url: '/api/store/favourites' })).json().deleted).toBe(true)
     expect((await app.fastify.inject('/api/store/favourites')).json().exists).toBe(false)
+  })
+})
+
+describe('config', () => {
+  it('listens on loopback unless running in the Docker image', () => {
+    expect(resolveHost({})).toBe('127.0.0.1')
+    expect(resolveHost({ PROVIDENCE_IN_DOCKER: '0' })).toBe('127.0.0.1')
+    expect(resolveHost({ PROVIDENCE_IN_DOCKER: '1' })).toBe('0.0.0.0')
+  })
+  it('reads environment overrides', () => {
+    const c = loadConfig('/nonexistent', { PROVIDENCE_PORT: '5000', PROVIDENCE_DB_PATH: '/data/x.db', PROVIDENCE_WEB_DIR: '/app/web' })
+    expect(c).toMatchObject({ port: 5000, host: '127.0.0.1', dbPath: '/data/x.db', webDir: '/app/web' })
+    expect(loadConfig('/nonexistent', {})).toMatchObject({ port: 4317, dbPath: '/nonexistent/data/providence.db' })
+    expect(loadConfig('/nonexistent', {}).webDir).toBeUndefined()
   })
 })

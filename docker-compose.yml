@@ -1,0 +1,14 @@
+services:
+  providence:
+    build: .
+    image: providence
+    container_name: providence
+    restart: unless-stopped
+    ports:
+      # Loopback only: the app has no authentication.
+      - "127.0.0.1:4317:4317"
+    volumes:
+      - providence-data:/data
+
+volumes:
+  providence-data:

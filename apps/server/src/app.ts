@@ -1,3 +1,4 @@
+import fastifyStatic from '@fastify/static'
 import websocket from '@fastify/websocket'
 import Fastify, { type FastifyInstance } from 'fastify'
 import { BybitRest } from '@providence/adapter-bybit'
@@ -217,6 +218,16 @@ export function buildApp(deps: AppDeps): App {
     if (!KEY_RE.test(key)) throw bad('invalid key')
     return { ok: true, deleted: kv.delete(key) }
   })
+
+  // ---------- built web app (production / Docker) ----------
+  if (config.webDir) {
+    void fastify.register(fastifyStatic, { root: config.webDir, wildcard: false })
+    // Unknown non-API paths get the app shell.
+    fastify.setNotFoundHandler((req, reply) => {
+      if (req.url.startsWith('/api/') || req.url === '/events') return reply.status(404).send({ error: 'not found' })
+      return reply.sendFile('index.html')
+    })
+  }
 
   return { fastify, db, rest, candles, market, kv, alerts, broadcast }
 }
