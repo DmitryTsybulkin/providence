@@ -1,10 +1,51 @@
 # Providence
 
-Open-source, local-first charting app for crypto — a free alternative to TradingView's charts.
+**A free, open-source trading analysis platform — for traders, developers and analysts.**
 
-Everything runs on your own machine: a React web app plus a small local server that stores your settings, caches
-market data and evaluates alerts. Market data comes from **Bybit's public API**: no account, no API keys, no
-telemetry.
+Charts, indicators, drawing tools and alerts that run entirely on your own computer. No account, no subscription,
+no ads, no telemetry. Just `docker compose up` and start analysing.
+
+![Providence: chart with volume, drawing toolbar and markets list](docs/images/screenshot.png)
+
+> [!note]
+> Providence is young (v0.1). Today it covers crypto and tokenised assets from Bybit's public market data. More data
+> sources and modules are on the [roadmap](#roadmap).
+
+## Why Providence?
+
+Great charting tools exist, but most are closed, cloud-based and paywalled, and you can't change how they work.
+Providence takes a different path:
+
+- **Free forever.** MIT-licensed. Every feature is available to everyone.
+- **Yours.** Runs locally; your drawings, layouts and alerts live in a SQLite file on your machine.
+- **Hackable.** TypeScript end to end. Indicators and drawing tools are small modules you can read, copy and change.
+- **Modular.** A small core plus extension points (data adapters, indicators, drawing tools, panels, alert channels),
+  so new features grow as plugins instead of a monolith.
+
+### Who is it for?
+
+| You are… | Providence gives you… |
+|---|---|
+| a **trader** | a clean chart, the indicators and drawing tools you use daily, and alerts that work with the tab closed |
+| an **algo trader** | a local place to look at your data, and (soon) a way to connect and control your own bot |
+| a **developer** | a readable React + Fastify codebase where a new indicator is one TypeScript file |
+| an **analyst** | history on any timeframe, CSV/JSON export with indicator values, screenshots |
+
+### How it compares
+
+TradingView and MetaTrader are mature products built by large teams. Providence isn't trying to beat them on
+breadth; it aims to be the free, open and self-hosted option.
+
+| | Providence | TradingView | MetaTrader 4/5 |
+|---|---|---|---|
+| Price | free, all features | free plan with limits, paid plans | free, usually through a broker |
+| Source code | open (MIT) | closed | closed |
+| Where it runs | your computer (browser + local server) | cloud / web | desktop app |
+| Account needed | no | yes | broker account |
+| Your data | stays local | on their servers | broker / local |
+| Extending it | TypeScript modules, fork anything | Pine Script | MQL |
+| Markets today | Bybit (crypto, tokenised stocks & metals) | very broad | depends on broker |
+| Social features | none (by design) | yes | limited |
 
 ## Features
 
@@ -25,6 +66,33 @@ telemetry.
 - **Export** — candles as CSV, candles + indicator values as JSON, chart screenshot as PNG; exported JSON can be
   opened again for viewing.
 - English and Russian interface, dark theme.
+
+## Quick start
+
+### Option 1: let an AI assistant install it
+
+Paste this into Claude Code (or any coding assistant that can run commands on your machine):
+
+```text
+Install and start Providence for me from https://github.com/<your-github-user>/providence.
+1. Check whether Docker is installed and running. If yes: clone the repo, run `docker compose up -d --build`
+   in it, wait until http://localhost:4317 responds, and tell me to open it.
+2. If Docker is not available: check for Node.js 22+ (install it if missing, e.g. via nvm or Homebrew),
+   run `corepack enable pnpm`, clone the repo, then `pnpm install`, `pnpm build` and `pnpm start`,
+   and tell me to open http://localhost:4317.
+3. Do not expose the port to the network (bind to 127.0.0.1 only) and do not change any config defaults.
+If a step fails, show me the error and suggest a fix before trying anything else.
+```
+
+### Option 2: three commands
+
+```bash
+git clone https://github.com/<your-github-user>/providence.git
+cd providence
+docker compose up -d --build
+```
+
+Open http://localhost:4317. Details and the no-Docker setup are below.
 
 ## How it works
 
@@ -143,6 +211,38 @@ and the current state in [`Notes/REPORT.md`](Notes/REPORT.md).
 
 No telemetry and no accounts. The only outbound connections are to Bybit's public REST and WebSocket endpoints.
 
+## Roadmap
+
+Providence grows as **modules** on top of a small charting core. Planned, roughly in this order:
+
+- [x] **v0.1 Charting core**: markets list, charts, indicators, drawing tools, layouts, alerts, export
+- [ ] **Telegram notifications**: alerts delivered to your phone
+- [ ] **Module system**: load third-party data adapters, indicators, drawing tools and panels without forking
+- [ ] **More data sources**: other crypto exchanges, stocks and ETFs from free data providers
+- [ ] **AI assistant**: ask about the chart in plain language, get explanations of patterns and indicators, and
+      AI-assisted scenarios for forecasting (as analysis help, not trading advice)
+- [ ] **Strategy DSL**: describe a trading strategy in a simple text language with syntax highlighting and errors
+- [ ] **On-chart backtesting**: run a strategy on history and see entries, exits, stops and skipped signals on the
+      chart, with a report and an equity curve
+- [ ] **Bot integration**: an open REST + WebSocket protocol so any trading bot can show status, positions and P&L
+      in Providence and be paused or flattened (with confirmation)
+- [ ] **Strategy optimisation**: parameter search with a results table
+- [ ] **Paper trading**: place manual trades on live data without risking money
+- [ ] Later: light theme, accessibility, more languages, desktop app
+
+Ideas and votes are welcome in the issues.
+
+## Contributing
+
+Issues and pull requests are welcome. Please run `pnpm typecheck && pnpm lint && pnpm test` before opening a PR.
+Never commit API keys, personal trading data or private strategies.
+
+## Disclaimer
+
+Providence is an analysis tool, not financial advice. Market data comes from third-party public APIs and may be
+delayed or wrong. Trade at your own risk.
+
 ## License
 
-Not chosen yet (MIT or Apache-2.0) — see `docs/Features/architecture.md` §11.
+[MIT](LICENSE) © 2026 Dmitrii Tsybulkin. Charts are drawn with [KLineChart](https://github.com/klinecharts/KLineChart)
+(Apache-2.0).

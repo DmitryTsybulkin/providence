@@ -12,3 +12,6 @@ config.json
 .vite/
 coverage/
 *.tsbuildinfo
+
+.idea/
+.DS_Store
