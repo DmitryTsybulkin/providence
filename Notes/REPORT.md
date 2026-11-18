@@ -17,7 +17,7 @@ Everything below was exercised in the browser at http://localhost:5173 against l
 | Asset list | Right of the charts; USDT perpetuals and spot; search, sort, favourites on top, optional Turnover/Funding columns, 5 s refresh, virtualized; click selects the symbol |
 | Chart | KLineChart 9.8.12 behind `ChartEngine`; 7 timeframes; history paging in both directions (cap 50 000); go to date; live last candle |
 | Indicators | SMA, EMA, Bollinger, Parabolic SAR, VWAP, Pivot Points Standard (overlay); Volume, MACD, RSI, Stochastic, ATR, CCI, OBV (pane); params dialog, hide, remove, max 10 |
-| Drawings | 21 tools: 15 built-in overlays + custom long/short position (live R:R and %, fixed stop, outcome line), price range, date range, text, arrow; style bar; Delete; undo; saved per symbol, shared across timeframes and cells |
+| Drawings | 22 tools: 15 built-in overlays + custom Fibonacci channel, long/short position (live R:R and %, fixed stop, outcome line), price range, date range, text, arrow; style bar; Delete; undo; saved per symbol, shared across timeframes and cells |
 | Layouts | 1 / 2 / 4 charts, each with its own symbol, timeframe and indicators; active cell receives asset-list clicks |
 | Alerts | Server-side engine: price cross/above/below, line cross from a drawn horizontal or trend line, indicator (RSI, EMA, SMA, ATR) on candle close; once / every time; expiry; panel with history; in-app toast |
 | Export | CSV, JSON (legacy format), PNG; exported JSON can be re-opened for viewing |

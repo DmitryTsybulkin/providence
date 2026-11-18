@@ -74,7 +74,7 @@ export const en = {
       horizontalRayLine: 'Horizontal ray', horizontalSegment: 'Horizontal segment', verticalStraightLine: 'Vertical line',
       verticalRayLine: 'Vertical ray', verticalSegment: 'Vertical segment', priceLine: 'Price line',
       parallelStraightLine: 'Parallel channel', priceChannelLine: 'Price channel', fibonacciLine: 'Fibonacci retracement',
-      longPosition: 'Long position', shortPosition: 'Short position', priceRange: 'Price range', dateRange: 'Date range',
+      fibonacciChannel: 'Fibonacci channel', longPosition: 'Long position', shortPosition: 'Short position', priceRange: 'Price range', dateRange: 'Date range',
       text: 'Text', simpleAnnotation: 'Annotation', simpleTag: 'Price tag', arrow: 'Arrow',
     },
   },

@@ -76,7 +76,7 @@ export const ru: Strings = {
       horizontalRayLine: 'Горизонтальный луч', horizontalSegment: 'Горизонтальный отрезок', verticalStraightLine: 'Вертикальная линия',
       verticalRayLine: 'Вертикальный луч', verticalSegment: 'Вертикальный отрезок', priceLine: 'Ценовая линия',
       parallelStraightLine: 'Параллельный канал', priceChannelLine: 'Ценовой канал', fibonacciLine: 'Коррекция Фибоначчи',
-      longPosition: 'Длинная позиция', shortPosition: 'Короткая позиция', priceRange: 'Диапазон цен', dateRange: 'Диапазон дат',
+      fibonacciChannel: 'Канал Фибоначчи', longPosition: 'Длинная позиция', shortPosition: 'Короткая позиция', priceRange: 'Диапазон цен', dateRange: 'Диапазон дат',
       text: 'Текст', simpleAnnotation: 'Аннотация', simpleTag: 'Ценовая метка', arrow: 'Стрелка',
     },
   },

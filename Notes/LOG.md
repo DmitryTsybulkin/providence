@@ -313,3 +313,16 @@ https://www.tradingview.com/support/solutions/43000521824-pivot-points-standard/
   developing next-period pivots drawn before the period starts.
 - Indicator params gained a `select` type (`SelectParam`) and `inCaption: false` to keep display settings out of
   the chip caption.
+
+## Small changes (2026-11-18)
+
+- Layout buttons (1 / 2 / 4 charts) moved from the top bar into the chart header, after "Export". The layout belongs
+  to the whole grid, so only the first cell shows them.
+- Mouse wheel over the price axis scales the price range (down = wider range / shorter candles, up = narrower),
+  like dragging the axis; double-click the axis resets it. KLineChart 9 has no public API for this, so the engine
+  calls the internals its own axis drag uses (`getDrawPaneById('candle_pane').getAxisComponent().setRange` +
+  `adjustPaneViewport`) — re-check on any klinecharts upgrade. The wheel event is stopped so the time axis does not
+  zoom at the same time.
+- Fibonacci channel (custom overlay `fibonacciChannel`, Fibonacci group): clicks 1–2 = base trend line, click 3 =
+  channel width; levels 0, 0.236, 0.382, 0.5, 0.618, 0.786, 1, 1.618, 2.618, 3.618, 4.236 as lines parallel to the
+  base, labelled with level and price. The pinned 9.8.12 build has no built-in Fibonacci channel.

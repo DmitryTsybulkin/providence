@@ -246,7 +246,49 @@ const arrow: OverlayTemplate = {
   },
 }
 
+/** Fibonacci channel levels (TradingView defaults). */
+export const FIB_CHANNEL_LEVELS = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1, 1.618, 2.618, 3.618, 4.236]
+
+/**
+ * Fibonacci channel: click 1 and 2 set the base trend line, click 3 the channel width. Each level is a line
+ * parallel to the base, shifted by `level × (vertical distance from the base to point 3)`.
+ */
+const fibonacciChannel: OverlayTemplate = {
+  name: 'fibonacciChannel',
+  totalStep: 4,
+  needDefaultPointFigure: true,
+  needDefaultXAxisFigure: false,
+  needDefaultYAxisFigure: false,
+  createPointFigures: ({ overlay, coordinates, precision, yAxis }) => {
+    if (coordinates.length < 2) return []
+    const [a, b] = coordinates
+    const styles = lineStyles(overlay.styles, COLORS.accent)
+    if (coordinates.length < 3) return [{ type: 'line', attrs: { coordinates: [a, b] }, styles }]
+    const c = coordinates[2]
+    const slope = b.x === a.x ? 0 : (b.y - a.y) / (b.x - a.x)
+    const dy = c.y - (a.y + slope * (c.x - a.x))
+    const left = Math.min(a.x, b.x)
+    const right = Math.max(a.x, b.x)
+    const yAt = (x: number, shift: number) => a.y + slope * (x - a.x) + shift
+    const figures: unknown[] = []
+    for (const level of FIB_CHANNEL_LEVELS) {
+      const y1 = yAt(left, level * dy)
+      const y2 = yAt(right, level * dy)
+      figures.push({ type: 'line', attrs: { coordinates: [{ x: left, y: y1 }, { x: right, y: y2 }] }, styles })
+      const price = yAxis?.convertFromPixel(y1)
+      figures.push({
+        type: 'text',
+        attrs: { x: left - 4, y: y1, text: `${level}${price === undefined ? '' : ` (${price.toFixed(precision.price)})`}`, align: 'right', baseline: 'middle' },
+        styles: { style: 'fill', color: styles.color, size: 11, family: FONT, weight: 'normal', backgroundColor: 'transparent' },
+        ignoreEvent: true,
+      })
+    }
+    return figures as ReturnType<NonNullable<OverlayTemplate['createPointFigures']>>
+  },
+}
+
 const CUSTOM_TEMPLATES: OverlayTemplate[] = [
+  fibonacciChannel,
   positionTemplate('longPosition'),
   positionTemplate('shortPosition'),
   priceRange,
@@ -271,6 +313,7 @@ export const DRAWING_TOOLS: DrawingTool[] = [
   builtin('parallelStraightLine', 'Parallel channel', 'channels'),
   builtin('priceChannelLine', 'Price channel', 'channels'),
   builtin('fibonacciLine', 'Fibonacci retracement', 'fib'),
+  { id: 'fibonacciChannel', label: 'Fibonacci channel', group: 'fib', template: templateOf('fibonacciChannel') },
   { id: 'longPosition', label: 'Long position', group: 'forecast', template: templateOf('longPosition') },
   { id: 'shortPosition', label: 'Short position', group: 'forecast', template: templateOf('shortPosition') },
   { id: 'priceRange', label: 'Price range', group: 'forecast', template: templateOf('priceRange') },

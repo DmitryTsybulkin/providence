@@ -1,5 +1,5 @@
 import {
-  ActionType, dispose, init, LoadDataType, OverlayMode,
+  ActionType, DomPosition, dispose, init, LoadDataType, OverlayMode,
   type Chart, type Indicator, type KLineData, type Overlay, type OverlayCreate, type Point,
 } from 'klinecharts'
 import type { Candle, DrawingShape, IndicatorState } from '@providence/core'
@@ -14,6 +14,13 @@ import type {
 } from './types'
 
 const DRAWING_GROUP = 'drawings'
+
+/** The internal y-axis methods KLineChart's own axis drag uses. */
+interface PriceAxisInternals {
+  getRange(): { from: number; to: number; range: number }
+  setRange(r: { from: number; to: number; range: number; realFrom: number; realTo: number; realRange: number }): void
+  convertToRealValue(v: number): number
+}
 
 export function toKLine(c: Candle): KLineData {
   return { timestamp: c.t, open: c.o, high: c.h, low: c.l, close: c.c, volume: c.v }
@@ -59,6 +66,7 @@ export class KLineEngine implements ChartEngine {
     if (!chart) throw new Error('Failed to initialise the chart')
     this.chart = chart
     chart.subscribeAction(ActionType.OnDataReady, () => this.onDataRange())
+    this.installPriceAxisWheel()
 
     chart.setLoadDataCallback(({ type, data, callback }) => {
       const generation = this.generation
@@ -81,6 +89,41 @@ export class KLineEngine implements ChartEngine {
           if (generation === this.generation) callback([], true)
         })
     })
+  }
+
+  /**
+   * Mouse wheel over the price axis scales the price range, like dragging the axis does:
+   * scroll down = wider range (candles get shorter), scroll up = narrower. Double-click the axis to reset.
+   * KLineChart 9 has no public API for this, so it uses the same internals as its own axis drag
+   * (`AxisImp.setRange` + `adjustPaneViewport`).
+   */
+  private installPriceAxisWheel(): void {
+    const el = this.chart.getDom('candle_pane', DomPosition.YAxis)
+    if (!el) return
+    el.addEventListener(
+      'wheel',
+      (e: WheelEvent) => {
+        e.preventDefault()
+        e.stopPropagation() // otherwise the chart also zooms the time axis
+        const internal = this.chart as unknown as {
+          getDrawPaneById(id: string): { getAxisComponent(): PriceAxisInternals } | null
+          adjustPaneViewport(a: boolean, b: boolean, c: boolean, d: boolean): void
+        }
+        const axis = internal.getDrawPaneById?.('candle_pane')?.getAxisComponent()
+        if (!axis?.getRange || !axis.setRange || !axis.convertToRealValue) return
+        const { from, to, range } = axis.getRange()
+        const delta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY
+        const scale = Math.min(4, Math.max(0.25, Math.exp(delta * 0.002)))
+        const newRange = range * scale
+        const newFrom = from - (newRange - range) / 2
+        const newTo = to + (newRange - range) / 2
+        const realFrom = axis.convertToRealValue(newFrom)
+        const realTo = axis.convertToRealValue(newTo)
+        axis.setRange({ from: newFrom, to: newTo, range: newRange, realFrom, realTo, realRange: realTo - realFrom })
+        internal.adjustPaneViewport(false, true, true, true)
+      },
+      { passive: false },
+    )
   }
 
   setPrecision(price: number, volume: number): void {

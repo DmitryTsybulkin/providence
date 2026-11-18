@@ -14,6 +14,7 @@ import { useWsStatus } from '../state/ws'
 import { DrawingStyleBar, DrawingToolbar } from './Drawings'
 import { ExportMenu } from './ExportMenu'
 import { GoToDate } from './GoToDate'
+import { LayoutSwitcher } from './LayoutSwitcher'
 import { IndicatorChips, IndicatorPicker } from './Indicators'
 
 /** Dev-only handle for poking at charts from the browser console: `__providence.cells[0].engine`. */
@@ -185,6 +186,8 @@ export function ChartCell({ index }: { index: number }) {
             void ctrlRef.current?.showStatic(chart.candles)
           }}
         />
+        {/* The layout belongs to the whole grid, so only the first cell shows the switcher. */}
+        {index === 0 && <LayoutSwitcher />}
         <span className="grow" />
         {imported && (
           <>
